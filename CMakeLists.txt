@@ -5,7 +5,7 @@ set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_STANDARD 26)
 
-project(mc)
+project(RV-Assembler)
 
 add_compile_options("-fno-rtti")
 add_compile_options("-Wall")
@@ -34,5 +34,5 @@ aux_source_directory(lib/utils/ADT UTILS_ADT)
 
 set(ASSEMBLER ${MC} ${PARSER} ${UTILS} ${UTILS_ADT})
 
-add_executable(mc lib/main.cpp ${ASSEMBLER})
-add_executable(stl lib/STL.cpp ${ASSEMBLER})
+add_executable(assembler lib/main.cpp ${ASSEMBLER})
+add_executable(test-extStl lib/STL.cpp ${ASSEMBLER})
