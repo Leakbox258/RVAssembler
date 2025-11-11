@@ -23,7 +23,9 @@ void MCContext::mkStrTab() {
   }
 
   for (const auto& [relo_sym, ndx] : Symbols) {
-    StrTabBuffer << relo_sym << '\x00';
+    if (!StrTabBuffer.hasSym(relo_sym)) {
+      StrTabBuffer << relo_sym << '\x00';
+    }
   }
 
   for (const auto& label : TextLabels.keys()) {
@@ -69,7 +71,7 @@ void MCContext::Relo() {
 
       inst->reloSym(0ll);
     }
-    /// extern symbols
+    /// then the sym will be extern symbol
     else {
       this->ExternSymbols.insert(sym);
 

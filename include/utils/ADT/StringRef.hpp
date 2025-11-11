@@ -59,20 +59,25 @@ public:
       : Data(StrRef.Data), Length(StrRef.Length) {}
 
   template <typename T> constexpr StringRef& operator=(T&& StrRef) {
-    static_assert(std::is_same_v<T, StringRef> ||
-                  std::is_same_v<T, std::string_view> ||
-                  std::is_same_v<T, const std::string&> ||
-                  std::is_same_v<T, const char*>);
-    if constexpr (std::is_same_v<T, StringRef>) {
+    static_assert(
+        std::is_same_v<std::remove_reference_t<T>, StringRef> ||
+        std::is_same_v<std::remove_reference_t<T>, std::string_view> ||
+        std::is_same_v<std::remove_reference_t<T>, const std::string&> ||
+        std::is_same_v<std::remove_reference_t<T>, const char*>);
+
+    if constexpr (std::is_same_v<std::remove_reference_t<T>, StringRef>) {
       Data = StrRef.Data;
       Length = StrRef.Length;
-    } else if constexpr (std::is_same_v<T, std::string_view>) {
+    } else if constexpr (std::is_same_v<std::remove_reference_t<T>,
+                                        std::string_view>) {
       Data = StrRef.data();
       Length = StrRef.size();
-    } else if constexpr (std::is_same_v<T, const std::string&>) {
+    } else if constexpr (std::is_same_v<std::remove_reference_t<T>,
+                                        const std::string&>) {
       Data = StrRef.data();
       Length = StrRef.size();
-    } else if constexpr (std::is_same_v<T, const char*>) {
+    } else if constexpr (std::is_same_v<std::remove_reference_t<T>,
+                                        const char*>) {
       Data = StrRef;
       Length = StrRef ? std::strlen(StrRef) : 0;
     }

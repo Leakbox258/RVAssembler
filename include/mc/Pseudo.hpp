@@ -4,13 +4,68 @@
 #include "MCExpr.hpp"
 #include "MCInst.hpp"
 #include "MCOperand.hpp"
+#include "mc/MCOpCode.hpp"
 #include "utils/ADT/SmallVector.hpp"
 #include "utils/ADT/StringMap.hpp"
+#include "utils/lisp/lisp.hpp"
+#include <array>
 #include <cstdint>
 
 namespace mc {
 using MCInsts = utils::ADT::SmallVector<MCInst, 2>;
 template <typename T> using StringMap = utils::ADT::StringMap<T>;
+using Lisp = utils::lisp::Lisp;
+using LispNode = utils::lisp::LispNode;
+
+struct Pseudo {
+private:
+  struct InnerInst {
+    MCOpCode* Op;
+    enum OperandKind { Rd, Rt, Rs, Symbol, Offset, Imme };
+    std::array<OperandKind, 4> Operands;
+    uint32_t opNr;
+
+    constexpr uint32_t push(OperandKind op) {
+      Operands[opNr] = op;
+      return ++opNr;
+    }
+  };
+
+  void parseImpl(LispNode* rootNode) {
+    /// @note notice that asm inst wont ref to each other cause they all have
+    /// side effets
+    for (auto son : rootNode->sons) {
+      InnerInst inst{};
+      inst.Op =
+          const_cast<MCOpCode*>(parser::MnemonicFind(son->content.data()));
+
+      for (auto operand : son->sons) {
+        auto op = StringSwitch<InnerInst::OperandKind>(operand->content)
+                      .Case("rd", InnerInst::Rd)
+                      .Case("rd", InnerInst::Rt)
+                      .Case("rd", InnerInst::Rs)
+                      .Case("symbol", InnerInst::Symbol)
+                      .Case("offset", InnerInst::Offset)
+                      .Case("imm", InnerInst::Imme)
+                      .Error();
+
+        inst.push(op);
+      }
+    }
+  }
+
+public:
+  StringRef name;
+  std::array<InnerInst, 4> Insts;
+  uint32_t InstNr;
+
+  constexpr Pseudo(const char* PseudoName, const char* LispPattern)
+      : name(PseudoName) {
+    Lisp lisp(LispPattern);
+    auto rootNode = lisp.getRoot();
+    parseImpl(rootNode);
+  }
+};
 
 /// used as call-back
 MCInsts ld_rd_symbol(MCReg rd, StringRef symbol);
@@ -47,8 +102,8 @@ MCInsts zext_b_rd_rs(MCReg rd, MCReg rs);
 MCInsts zext_h_rd_rs(MCReg rd, MCReg rs);
 MCInsts zext_w_rd_rs(MCReg rd, MCReg rs);
 
-MCInsts call_symbol(); // call_offset
-MCInsts tail_symbol(); // tail_offset
+MCInsts call_symbol(StringRef symbol); // call_offset
+MCInsts tail_symbol(StringRef symbol); // tail_offset
 
 /// TODO: more
 

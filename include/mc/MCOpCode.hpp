@@ -139,10 +139,6 @@ public:
 
       auto& raw_pattern = *raw_pattern_it;
 
-      // if (raw_pattern.empty()) {
-      //   continue;
-      // }
-
       EnCoding encoding =
           StringSwitch<EnCoding>(raw_pattern)
               .BeginWith("offset",
@@ -268,9 +264,9 @@ public:
   inline constexpr char _##name##_Pattern[] = #pattern;                        \
   static constexpr MCOpCode name{_##name, _##name##_Pattern};
 
-#define DOIT(name, pattern) ASM(name, pattern)
+#define INSTRUCTION(name, pattern) ASM(name, pattern)
 #include "RISCV.def"
-#undef DOIT
+#undef INSTRUCTION
 
 } // namespace mc
 
@@ -280,11 +276,11 @@ namespace parser {
 
 /// NOTE: tuple<pair<array<N>, MCOpCode*>, ...>
 /// NOTE: avoid using std::make_tuple(), because of tailing comma
-#define DOIT(name, pattern) std::make_pair(MNEMONIC(name), &mc::name),
+#define INSTRUCTION(name, pattern) std::make_pair(MNEMONIC(name), &mc::name),
 constexpr inline auto MnemonicMap = std::tuple{
 #include "RISCV.def"
 };
-#undef DOIT
+#undef INSTRUCTION
 
 template <size_t N>
 constexpr bool MnemonicContainImpl(const std::array<char, N>& arr,
