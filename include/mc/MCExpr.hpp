@@ -11,7 +11,7 @@ using StringRef = utils::ADT::StringRef;
 class MCExpr {
 public:
   enum ExprTy : uint8_t {
-    kInValid,
+    kInvalid,
     kLO, // 0 - 11
     kHI, // 12 - 31
     kPCREL_LO,
@@ -20,11 +20,21 @@ public:
     kTPREL_ADD,
     kTPREL_HI,
     kTLS_IE_PCREL_HI, // Initial Exec
-    kTLS_GD_PCREL_HI  // Global Dynamic
+    kTLS_GD_PCREL_HI, // Global Dynamic
+
+    /// for br & jr
+    kJAL,
+    kBRANCH,
+    kRVC_JUMP,
+    kRVC_BRANCH,
+
+    /// need to fix with more info
+    gLO,
+    gHI,
   };
 
 private:
-  ExprTy Kind = kInValid;
+  ExprTy Kind = kInvalid;
   std::string Symbol;
   uint64_t Append; // +/-
 public:
@@ -61,16 +71,21 @@ inline MCExpr::ExprTy getExprTy(const StringRef& Mod) {
       .Case("%tprel_hi", MCExpr::kTPREL_HI)
       .Case("%tls_ie_pcrel_hi", MCExpr::kTLS_IE_PCREL_HI)
       .Case("%tls_gd_pcrel_hi", MCExpr::kTLS_GD_PCREL_HI)
-      .Default(MCExpr::kInValid);
+      .Default(MCExpr::kInvalid);
 }
 
 inline unsigned getModifierSize(MCExpr::ExprTy mod) {
   using ExprTy = MCExpr::ExprTy;
   switch (mod) {
-  case ExprTy::kInValid:
-    utils::unreachable("invalid modifier");
+  case ExprTy::kInvalid:
+    utils::unreachable("unknown modifier");
+  case ExprTy::kRVC_BRANCH:
+    return 9;
   case ExprTy::kLO:
   case ExprTy::kPCREL_LO:
+  case ExprTy::gLO:
+  case ExprTy::kBRANCH:
+  case ExprTy::kRVC_JUMP:
     return 12;
   case ExprTy::kHI:
   case ExprTy::kPCREL_HI:
@@ -79,7 +94,10 @@ inline unsigned getModifierSize(MCExpr::ExprTy mod) {
   case ExprTy::kTPREL_HI:
   case ExprTy::kTLS_IE_PCREL_HI:
   case ExprTy::kTLS_GD_PCREL_HI:
+  case ExprTy::gHI:
     return 20;
+  case ExprTy::kJAL:
+    return 21;
   }
   utils::unreachable("unknown modifier");
   return 0;

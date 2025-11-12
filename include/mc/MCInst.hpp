@@ -76,7 +76,7 @@ public:
       }
     }
 
-    return MCExpr::kInValid;
+    return MCExpr::kInvalid;
   }
 
   size_ty getOffset() const { return Offset; }
@@ -106,7 +106,9 @@ public:
                         [&](const MCOperand& op) { return op.isExpr(); });
   }
 
-  uint32_t getReloType() const;
+  MCExpr::ExprTy getExprTy() const;
+
+  uint32_t getRiscvRType() const;
 
   constexpr static MCInst makeNop(Location Loc, size_ty Offset) {
     auto nop = MCInst(parser::MnemonicFind("addi"), Loc, Offset);

@@ -2,6 +2,7 @@
 #include "mc/MCExpr.hpp"
 #include "mc/MCOpCode.hpp"
 #include "mc/MCOperand.hpp"
+#include "utils/logger.hpp"
 #include "utils/macro.hpp"
 #include "utils/misc.hpp"
 #include <elf.h>
@@ -25,45 +26,59 @@ void MCInst::reloSym(int64_t offset) {
   return;
 }
 
-uint32_t MCInst::getReloType() const {
+MCExpr::ExprTy MCInst::getExprTy() const {
+  using ExprTy = MCExpr::ExprTy;
   if (!hasExpr()) {
-    /// Relo type will rely on the instruction types
-    /// jmp / branch inst
-    /// TODO: to fit more relo type
-    return StringSwitch<uint32_t>(OpCode->name)
-        .BeginWith("J", static_cast<uint32_t>(R_RISCV_JAL))
-        .BeginWith("B", static_cast<uint32_t>(R_RISCV_BRANCH))
-        .BeginWith("C_J", static_cast<uint32_t>(R_RISCV_RVC_JUMP))
-        .BeginWith("C_B", static_cast<uint32_t>(R_RISCV_RVC_BRANCH))
+    return StringSwitch<ExprTy>(OpCode->name)
+        .BeginWith("J", ExprTy::kJAL)
+        .BeginWith("B", ExprTy::kBRANCH)
+        .BeginWith("C_J", ExprTy::kRVC_JUMP)
+        .BeginWith("C_B", ExprTy::kRVC_BRANCH)
         .Error();
   } else {
-    using ExprTy = MCExpr::ExprTy;
+    return getExprOp()->getExpr()->getModifier();
+  }
+}
 
-    switch (getExprOp()->getExpr()->getModifier()) {
-    case ExprTy::kInValid:
-      /// @warning this enum meaning that you need to fix reloType according to
-      /// symbol itself
-      return R_RISCV_NONE;
-    case ExprTy::kLO:
-      return OpCode->imm_distribute == 1 ? R_RISCV_LO12_I : R_RISCV_LO12_S;
-    case ExprTy::kPCREL_LO:
-      return OpCode->imm_distribute == 1 ? R_RISCV_PCREL_LO12_I
-                                         : R_RISCV_PCREL_LO12_S;
-    case ExprTy::kHI:
-      return R_RISCV_HI20;
-    case ExprTy::kPCREL_HI:
-      return R_RISCV_PCREL_HI20;
-    case ExprTy::kGOT_PCREL_HI:
-      return R_RISCV_GOT_HI20;
-    case ExprTy::kTPREL_ADD:
-      return R_RISCV_TPREL_ADD;
-    case ExprTy::kTPREL_HI:
-      return R_RISCV_TPREL_HI20;
-    case ExprTy::kTLS_IE_PCREL_HI:
-      return R_RISCV_TLS_GOT_HI20;
-    case ExprTy::kTLS_GD_PCREL_HI:
-      return R_RISCV_TLS_GD_HI20;
-    }
+/// Get R_RISCV_...
+uint32_t MCInst::getRiscvRType() const {
+
+  using ExprTy = MCExpr::ExprTy;
+
+  switch (getExprTy()) {
+  case ExprTy::kInvalid:
+  case ExprTy::gHI:
+  case ExprTy::gLO:
+    /// @warning this enum meaning that you need to fix reloType according to
+    /// symbol itself
+    utils::unreachable("");
+  case ExprTy::kLO:
+    return OpCode->imm_distribute == 1 ? R_RISCV_LO12_I : R_RISCV_LO12_S;
+  case ExprTy::kPCREL_LO:
+    return OpCode->imm_distribute == 1 ? R_RISCV_PCREL_LO12_I
+                                       : R_RISCV_PCREL_LO12_S;
+  case ExprTy::kHI:
+    return R_RISCV_HI20;
+  case ExprTy::kPCREL_HI:
+    return R_RISCV_PCREL_HI20;
+  case ExprTy::kGOT_PCREL_HI:
+    return R_RISCV_GOT_HI20;
+  case ExprTy::kTPREL_ADD:
+    return R_RISCV_TPREL_ADD;
+  case ExprTy::kTPREL_HI:
+    return R_RISCV_TPREL_HI20;
+  case ExprTy::kTLS_IE_PCREL_HI:
+    return R_RISCV_TLS_GOT_HI20;
+  case ExprTy::kTLS_GD_PCREL_HI:
+    return R_RISCV_TLS_GD_HI20;
+  case ExprTy::kJAL:
+    return R_RISCV_JAL;
+  case ExprTy::kBRANCH:
+    return R_RISCV_BRANCH;
+  case ExprTy::kRVC_JUMP:
+    return R_RISCV_RVC_JUMP;
+  case ExprTy::kRVC_BRANCH:
+    return R_RISCV_RVC_BRANCH;
   }
 }
 

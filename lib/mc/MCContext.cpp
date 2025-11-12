@@ -61,7 +61,7 @@ void MCContext::Relo() {
       Rela.r_offset = inst->getOffset();
       Rela.r_info =
           ELF64_R_INFO(5 + std::distance(Symbols.begin(), iter),
-                       inst->getReloType()); // idx pointer to idx in .symtab
+                       inst->getRiscvRType()); // idx pointer to idx in .symtab
 
       auto expr = inst->getExprOp();
 
@@ -83,7 +83,7 @@ void MCContext::Relo() {
       Rela.r_info = ELF64_R_INFO(
           5 + Symbols.size() + // skip section name & .data .bss .text sym
               std::distance(ExternSymbols.begin(), ExternSymbols.find(sym)),
-          inst->getReloType());
+          inst->getRiscvRType());
 
       Elf_Relas.emplace_back(std::move(Rela));
 
