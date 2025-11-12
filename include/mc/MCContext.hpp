@@ -123,6 +123,7 @@ public:
     return this->TextLabels.insert(Str, std::move(offset));
   }
 
+  /// add local symbols from .data .text .bss
   bool addReloSym(StringRef Str, NdxSection ndx) {
     return this->Symbols.insert({Str.str(), ndx}).second;
   }

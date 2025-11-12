@@ -35,6 +35,8 @@ void MCContext::mkStrTab() {
   }
 }
 
+/// FIXME: when use pseudo (not explicitly use %...), need to fix the relo kind
+/// according to symbol itself
 void MCContext::Relo() {
 
   for (auto [inst, sym] : ReloInst) {
@@ -71,14 +73,15 @@ void MCContext::Relo() {
 
       inst->reloSym(0ll);
     }
-    /// then the sym will be extern symbol
+    /// else: the sym will be extern symbol
     else {
       this->ExternSymbols.insert(sym);
 
       Elf64_Rela Rela = {};
       Rela.r_offset = inst->getOffset();
+
       Rela.r_info = ELF64_R_INFO(
-          5 + Symbols.size() +
+          5 + Symbols.size() + // skip section name & .data .bss .text sym
               std::distance(ExternSymbols.begin(), ExternSymbols.find(sym)),
           inst->getReloType());
 

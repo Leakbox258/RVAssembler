@@ -9,6 +9,7 @@
 #include "utils/ADT/SmallVector.hpp"
 #include "utils/ADT/StringMap.hpp"
 #include "utils/lisp/lisp.hpp"
+#include "utils/misc.hpp"
 #include <array>
 #include <cstdint>
 
@@ -36,7 +37,18 @@ using LispNode = utils::lisp::LispNode;
 
 template <const char*... Ops> struct Pseudo {
 public:
-  enum OperandKind : uint8_t { Rd, Rt, Rs, Symbol, Offset, Imme };
+  /// notice that Imme here is ref to defined imme
+  /// eg: nop = addi x0, x0, `0`
+  enum OperandKind : int8_t {
+    Rd,
+    Rt,
+    Rs,
+    Symbol,
+    Offset,
+    ImmeNeg1,
+    Imme0,
+    Imme1,
+  };
 
 private:
   struct InstPattern {
@@ -54,7 +66,7 @@ private:
   uint32_t InstNr;
 
   bool rd = false, rt = false, rs = false, symbol = false, offset = false,
-       imme = false;
+       imme0 = false, imme1 = false, immeNeg1 = false;
 
   constexpr void parseImpl(LispNode* rootNode) {
     /// @note notice that asm inst wont ref to each other cause they all have
@@ -92,10 +104,20 @@ private:
                               offset = true;
                               return Offset;
                             })
-                      .Case("imm",
+                      .Case("0",
                             [this](auto&& _) {
-                              imme = true;
-                              return Imme;
+                              imme0 = true;
+                              return Imme0;
+                            })
+                      .Case("1",
+                            [this](auto&& _) {
+                              imme1 = true;
+                              return Imme1;
+                            })
+                      .Case("-1",
+                            [this](auto&& _) {
+                              immeNeg1 = true;
+                              return ImmeNeg1;
                             })
                       .Error();
 
@@ -115,8 +137,18 @@ public:
     parseImpl(rootNode);
   }
 
+  template <std::size_t I, OperandKind Kind, typename Ty>
+  void addOperand(MCContext& ctx, MCInstPtrs& Insts, auto ArgsTuple) {
+
+    if constexpr (utils::in_interval<true, true>(Imme0, ImmeNeg1, Kind)) {
+      addOperandImpl(ctx, Insts);
+    } else {
+      addOperandImpl(ctx, Insts, std::get<I>(ArgsTuple));
+    }
+  }
+
   template <OperandKind Kind, typename Ty>
-  void addOperand(MCContext& ctx, MCInstPtrs& Insts, Ty operand) {
+  void addOperandImpl(MCContext& ctx, MCInstPtrs& Insts, Ty operand) {
     for (uint32_t instCnt = 0; instCnt < InstNr; ++instCnt) {
       const auto& InstPattern = InstPatterns[instCnt];
       for (uint32_t opCnt = 0; opCnt < InstPattern.opNr; ++opCnt) {
@@ -124,7 +156,9 @@ public:
         if (InstPattern.Operands[opCnt] != Kind) {
           continue;
         }
+
         MCOperand newOp = MCOperand::make(operand);
+
         auto inst = Insts[instCnt];
 
         inst->addOperand(std::move(newOp));
@@ -137,19 +171,42 @@ public:
     }
   }
 
+  /// this implement is for `-1` `0` `1`
+  template <OperandKind Kind, typename Ty>
+  void addOperandImpl(MCContext& ctx, MCInstPtrs& Insts) {
+
+    for (uint32_t instCnt = 0; instCnt < InstNr; ++instCnt) {
+      const auto& InstPattern = InstPatterns[instCnt];
+      for (uint32_t opCnt = 0; opCnt < InstPattern.opNr; ++opCnt) {
+
+        if (InstPattern.Operands[opCnt] != Kind) {
+          continue;
+        }
+
+        MCOperand newOp = MCOperand::make((int64_t)Kind - ImmeNeg1 - 1);
+
+        auto inst = Insts[instCnt];
+
+        inst->addOperand(std::move(newOp));
+      }
+    }
+  }
+
   constexpr auto operator()(MCContext& ctx) {
 
-    using Types = decltype(std::make_tuple(Rd, Rt, Rs, Symbol, Offset, Imme));
+    /// input args
+    constexpr auto argTbl =
+        std::make_tuple(Rd, Rt, Rs, Symbol, Offset, ImmeNeg1, Imme0, Imme1);
+    using Types = decltype(argTbl);
 
     constexpr std::array<bool, std::tuple_size_v<Types>> flags = {
-        rd, rt, rs, symbol, offset, imme};
+        rd, rt, rs, symbol, offset, immeNeg1, imme0, imme1};
 
     constexpr auto instsBuild = [&ctx, this](auto ArgsTuple) {
       MCInstPtrs insts = ctx.newTextInsts(parser::MnemonicFind(Ops)...);
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
-        ((flags[I] ? addOperand<std::tuple_element_t<I, Types>>(
-                         ctx, insts, std::get<I>(ArgsTuple))
+        ((flags[I] ? addOperand<std::get<I>(argTbl)>(ctx, insts, ArgsTuple)
                    : void()),
          ...);
       }(std::make_index_sequence<std::tuple_size_v<Types>>{});

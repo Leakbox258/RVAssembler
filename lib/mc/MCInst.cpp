@@ -2,11 +2,8 @@
 #include "mc/MCExpr.hpp"
 #include "mc/MCOpCode.hpp"
 #include "mc/MCOperand.hpp"
-#include "utils/logger.hpp"
 #include "utils/macro.hpp"
 #include "utils/misc.hpp"
-#include <asm-generic/errno.h>
-#include <cstdint>
 #include <elf.h>
 
 using namespace mc;
@@ -44,7 +41,9 @@ uint32_t MCInst::getReloType() const {
 
     switch (getExprOp()->getExpr()->getModifier()) {
     case ExprTy::kInValid:
-      utils::unreachable("invalid modifier");
+      /// @warning this enum meaning that you need to fix reloType according to
+      /// symbol itself
+      return R_RISCV_NONE;
     case ExprTy::kLO:
       return OpCode->imm_distribute == 1 ? R_RISCV_LO12_I : R_RISCV_LO12_S;
     case ExprTy::kPCREL_LO:

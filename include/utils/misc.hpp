@@ -9,8 +9,8 @@
 #include <optional>
 namespace utils {
 
-template <typename T, bool LeftBounded = true, bool RightBounded = false>
-inline bool in_interval(T left, T right, T val) {
+template <bool LeftBounded = true, bool RightBounded = false, typename T>
+constexpr inline bool in_interval(T left, T right, T val) {
 
   std::less<T> LessThan;
   std::equal_to<T> Equal;
@@ -31,14 +31,15 @@ inline bool in_interval(T left, T right, T val) {
 }
 
 template <typename T, typename... Args>
-inline bool in_set(T Value, const Args&... Enum) {
+constexpr inline bool in_set(T Value, const Args&... Enum) {
   static_assert(sizeof...(Args) != 0, "At least provide one Enum value");
 
   return ((Value == Enum) || ...);
 }
 
 template <typename Tx, typename Ty, typename Tuple, std::size_t... I>
-Ty in_set_map_impl(Tx value, const Tuple& tuple, std::index_sequence<I...>) {
+constexpr Ty in_set_map_impl(Tx value, const Tuple& tuple,
+                             std::index_sequence<I...>) {
   Ty result = static_cast<Ty>(0);
 
   (void)((value == std::get<2 * I>(tuple)
@@ -50,7 +51,8 @@ Ty in_set_map_impl(Tx value, const Tuple& tuple, std::index_sequence<I...>) {
 }
 
 template <typename Tx, typename Ty, typename... Args>
-inline Ty in_set_map(Tx value, Args&&... Enums) { /* Tx, Ty, Tx, Ty... */
+constexpr inline Ty in_set_map(Tx value,
+                               Args&&... Enums) { /* Tx, Ty, Tx, Ty... */
   static_assert(sizeof...(Args) != 0 && sizeof...(Args) % 2 == 0,
                 "Must provide even number of arguments");
 
@@ -62,11 +64,11 @@ inline Ty in_set_map(Tx value, Args&&... Enums) { /* Tx, Ty, Tx, Ty... */
 }
 
 template <typename Tuple, std::size_t... I>
-bool pairs_equal_impl(const Tuple& tuple, std::index_sequence<I...>) {
+constexpr bool pairs_equal_impl(const Tuple& tuple, std::index_sequence<I...>) {
   return ((std::get<2 * I>(tuple) == std::get<2 * I + 1>(tuple)) && ...);
 }
 
-template <typename... Args> inline bool pairs_equal(Args&&... args) {
+template <typename... Args> constexpr inline bool pairs_equal(Args&&... args) {
   static_assert(sizeof...(Args) != 0 && sizeof...(Args) % 2 == 0,
                 "Must provide even number of arguments");
   auto tuple = std::make_tuple(std::forward<Args>(args)...);
@@ -85,7 +87,6 @@ inline auto size(
   return std::distance(Range.begin(), Range.end());
 }
 
-/// constexpr
 /// TODO: replace return value with std::optional
 constexpr inline int stoi(const char* str, std::size_t len, int base = 10) {
   if (base < 2 || base > 36) {

@@ -79,7 +79,7 @@ void Parser::parse() {
     case TokenType::IDENTIFIER:
       /// symbol used without modifiers
       /// this is often branch/jump insts or
-      /// .global xxx
+      /// .global xxx or
       /// TODO: pseudo instructions
       if (curInst) {
         JmpBrHelper(token.lexeme);

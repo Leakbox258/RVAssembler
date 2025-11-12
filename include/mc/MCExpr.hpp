@@ -12,8 +12,8 @@ class MCExpr {
 public:
   enum ExprTy : uint8_t {
     kInValid,
-    kLO,
-    kHI,
+    kLO, // 0 - 11
+    kHI, // 12 - 31
     kPCREL_LO,
     kPCREL_HI,
     kGOT_PCREL_HI,
