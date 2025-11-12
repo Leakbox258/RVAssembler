@@ -26,6 +26,7 @@ using StringRef = utils::ADT::StringRef;
 template <typename V> using StringMap = utils::ADT::StringMap<V>;
 using StringSet = utils::ADT::StringSet<>;
 using ByteStream = utils::ADT::ByteStream;
+using MCInstPtrs = utils::ADT::SmallVector<MCInst*, 4>;
 
 class MCContext {
 public:
@@ -143,9 +144,33 @@ public:
     return &this->Insts.back();
   }
 
+  MCInst* newTextInst(const MCOpCode* OpCode LIFETIME_BOUND) {
+    this->Insts.emplace_back(MCInst(OpCode));
+
+    return &this->Insts.back();
+  }
+
   size_ty commitTextInst() {
 
     auto newOffset = incTextOffset(this->Insts.back().isCompressed());
+
+    return newOffset;
+  }
+
+  template <typename... Args> MCInstPtrs newTextInsts(Args&&... OpCodes) {
+    MCInstPtrs insts{};
+
+    insts.emplace_back(newTextInst(OpCodes...));
+
+    return insts;
+  }
+
+  size_ty commitTextInsts(const MCInstPtrs& insts) {
+    size_ty newOffset = 0LL;
+
+    for (const auto& inst : insts) {
+      newOffset = incTextOffset(inst->isCompressed());
+    }
 
     return newOffset;
   }

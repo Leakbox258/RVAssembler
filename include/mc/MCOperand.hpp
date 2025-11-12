@@ -5,6 +5,7 @@
 #include "utils/macro.hpp"
 #include "utils/misc.hpp"
 #include <cstdint>
+#include <type_traits>
 namespace mc {
 
 template <typename V> using StringMap = utils::ADT::StringMap<V>;
@@ -135,6 +136,25 @@ public:
     op.Inst = std::move(_Inst);
     op.Kind = OpTy::kInst;
     return op;
+  }
+
+  template <typename Ty> static MCOperand make(Ty op) {
+
+    if constexpr (std::is_same_v<Ty, MCReg>) {
+      return makeReg(op);
+    } else if constexpr (std::is_same_v<Ty, int64_t>) {
+      return makeImm(op);
+    } else if constexpr (std::is_same_v<Ty, uint32_t>) {
+      return makeSFPImm(op);
+    } else if constexpr (std::is_same_v<Ty, uint64_t>) {
+      return makeDFPImm(op);
+    } else if constexpr (std::is_same_v<std::remove_cv_t<Ty>, MCExpr*>) {
+      return makeExpr(op);
+    } else if constexpr (std::is_same_v<std::remove_cv_t<Ty>, MCInst*>) {
+      return makeInst(op);
+    } else {
+      static_assert(false, "MCOperand: unknown type");
+    }
   }
 
   bool isValid() const { return Kind != kInvalid; }

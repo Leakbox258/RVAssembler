@@ -30,6 +30,8 @@ public:
   explicit MCInst(const StringRef& _OpCode LIFETIME_BOUND)
       : OpCode(parser::MnemonicFind(_OpCode.c_str())) {}
 
+  explicit MCInst(const MCOpCode* _OpCode LIFETIME_BOUND) : OpCode(_OpCode) {}
+
   explicit MCInst(const MCOpCode* _OpCode LIFETIME_BOUND, Location _Loc,
                   size_ty _Offset)
       : OpCode(_OpCode), Loc(_Loc), Offset(_Offset) {}
