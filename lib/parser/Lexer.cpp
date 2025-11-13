@@ -1,6 +1,7 @@
 #include "parser/Lexer.hpp"
 #include "mc/MCOpCode.hpp"
 #include "mc/MCOperand.hpp"
+#include "mc/Pseudo.hpp"
 #include "utils/likehood.hpp"
 #include <algorithm>
 #include <cctype>
@@ -120,6 +121,7 @@ Token Lexer::scanIdentifier() {
 
   std::string lexeme = m_source.slice(start, m_cursor).str();
 
+  /// lowercase: label, instruction, register, identifier
   std::transform(lexeme.begin(), lexeme.end(), lexeme.begin(),
                  [](unsigned char c) { return std::tolower(c); });
 
@@ -130,9 +132,10 @@ Token Lexer::scanIdentifier() {
                      m_source.slice(start, m_cursor));
   }
 
-  if (MnemonicContain(lexeme.c_str())) {
+  if (MnemonicContain(lexeme.c_str()) || PseudoContain(lexeme.c_str())) {
     return makeToken(TokenType::INSTRUCTION, lexeme);
   }
+
   if (mc::Registers.find(lexeme)) {
     return makeToken(TokenType::REGISTER, lexeme);
   }
@@ -191,6 +194,24 @@ Token Lexer::scanString() {
   advance(); // Consume the closing quote
   StringRef lexeme = m_source.slice(start, m_cursor - 1);
   return makeToken(TokenType::STRING_LITERAL, lexeme);
+}
+
+template <std::size_t N> SmallVector<Token, N> Lexer::peekNextTokens() {
+  SmallVector<Token, N> tokens{};
+
+  auto s_m_cursor = m_cursor;
+  auto s_m_line = m_line;
+  auto s_m_col = m_col;
+
+  for (auto i = 0ll; i < N; ++i) {
+    tokens.emplace_back(this->nextToken());
+  }
+
+  m_cursor = s_m_cursor;
+  m_line = s_m_line;
+  m_col = s_m_col;
+
+  return tokens;
 }
 
 Token Lexer::nextToken() {

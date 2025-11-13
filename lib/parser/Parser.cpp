@@ -4,12 +4,15 @@
 #include "mc/MCInst.hpp"
 #include "mc/MCOpCode.hpp"
 #include "mc/MCOperand.hpp"
+#include "mc/Pseudo.hpp"
 #include "parser/Lexer.hpp"
 #include "utils/ADT/SmallVector.hpp"
 #include "utils/ADT/StringSwitch.hpp"
 #include "utils/logger.hpp"
 #include "utils/macro.hpp"
 #include "utils/misc.hpp"
+#include <cstdint>
+#include <functional>
 
 using namespace parser;
 using namespace mc;
@@ -70,7 +73,11 @@ void Parser::parse() {
       ParseModifier();
       break;
     case TokenType::INSTRUCTION:
-      ParseInstruction();
+      if (isPseudo()) {
+        ParsePseudo();
+      } else {
+        ParseInstruction();
+      }
       break;
     case TokenType::REGISTER:
       ParseRegister();
@@ -95,7 +102,7 @@ void Parser::parse() {
 }
 
 const mc::MCOpCode* Parser::findOpCode(StringRef mnemonic) {
-  auto lookup = CacheLookUpTab.find(mnemonic);
+  auto lookup = OpCacheTab.find(mnemonic);
 
   if (lookup != nullptr) {
     utils_assert(*lookup, "CacheLookUpTab contains invalid key");
@@ -103,7 +110,7 @@ const mc::MCOpCode* Parser::findOpCode(StringRef mnemonic) {
   }
 
   mc::MCOpCode const* op = MnemonicFind(mnemonic.c_str());
-  CacheLookUpTab.insert(mnemonic, op);
+  OpCacheTab.insert(mnemonic, op);
 
   return op;
 }
@@ -366,6 +373,35 @@ void Parser::ParseInstruction() {
   }
 
   advance();
+}
+void Parser::ParsePseudo() {
+  /// collecting arguments
+
+  auto& pseudo = *PseudoFind(token.lexeme.c_str());
+  uint32_t regCnt = 0;
+  auto args = pseudo.getArgTuple();
+
+  while ((advance(), token.type != TokenType::NEWLINE)) {
+    switch (token.type) {
+    case TokenType::REGISTER: {
+      auto reg = RegHelper(token.lexeme);
+      if (regCnt == 0)
+        std::get<0>(args) = reg;
+      else if (regCnt == 1)
+        std::get<2>(args) = reg;
+      else if (regCnt == 2)
+        std::get<3>(args) = reg;
+      ++regCnt;
+    } break;
+    case TokenType::IDENTIFIER: // assign once
+      std::get<1>(args) = std::get<4>(args) = token.lexeme.c_str();
+      break;
+    default:
+      utils::unreachable("unknown item when unpacking pseudo");
+    }
+  }
+
+  std::apply(pseudo(), std::tuple_cat(std::make_tuple(std::ref(ctx)), args));
 }
 
 void Parser::ParseRegister() {

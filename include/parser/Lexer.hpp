@@ -2,7 +2,9 @@
 #define PARSER_LEXER
 
 #include "mc/MCInst.hpp"
+#include "mc/MCOpCode.hpp"
 #include "utils/ADT/StringRef.hpp"
+#include <cstddef>
 #include <string>
 
 namespace parser {
@@ -51,8 +53,12 @@ public:
 
   Token nextToken();
 
+  template <std::size_t N> SmallVector<Token, N> peekNextTokens();
+
 private:
   StringRef m_source;
+
+  /// location infomation
   std::size_t m_cursor = 0;
   std::size_t m_line = 1;
   std::size_t m_col = 1;

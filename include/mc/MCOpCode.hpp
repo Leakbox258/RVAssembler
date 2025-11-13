@@ -55,10 +55,11 @@ struct EnCoding {
     kRs1_short,
     kRs2_short,
     kRs3_short,
-    kRm,       // rounding mode (F/D extension)
-    kMemFence, // r, w, io
-               // AQ or RL will concat with mnemonic in A extension
-               // eg: LR.D.AQ t1, (s0)
+    kRm, // rounding mode (F/D extension)
+    /// TODO: r, w, io
+    kMemFence,
+    // AQ or RL will concat with mnemonic in A extension
+    // eg: LR.D.AQ t1, (s0)
   };
 
   EnCodeTy kind = kInvalid;

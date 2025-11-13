@@ -5,6 +5,7 @@
 #include "mc/MCContext.hpp"
 #include "mc/MCInst.hpp"
 #include "mc/MCOpCode.hpp"
+#include "mc/Pseudo.hpp"
 #include "utils/ADT/StringMap.hpp"
 #include "utils/macro.hpp"
 #include <cstdint>
@@ -25,7 +26,7 @@ private:
   Lexer& lexer;
 
   /// speed up mnemnoic class find
-  StringMap<const mc::MCOpCode*> CacheLookUpTab;
+  StringMap<const mc::MCOpCode*> OpCacheTab;
 
 public:
   Parser(mc::MCContext& _ctx LIFETIME_BOUND, Lexer& _lexer LIFETIME_BOUND)
@@ -56,7 +57,10 @@ private:
   void ParseHexInteger();
   void ParseFloat();
   void ParseModifier();
+
   void ParseInstruction();
+  void ParsePseudo();
+
   void ParseRegister();
   void ParseDirective();
   void ParseLabelDef();
@@ -64,6 +68,40 @@ private:
 
   /// this method assume mnemoic is valid
   const mc::MCOpCode* findOpCode(StringRef mnemonic);
+
+  /// whether is a instruction or pseudo
+  /// {l|s}{b|w|d} + jal jalr
+  bool isPseudo() {
+    utils_assert(token.type == TokenType::INSTRUCTION,
+                 "not a asm inst or pseudo");
+
+    auto op = token.lexeme.c_str();
+
+    if (MnemonicContain(op) && PseudoContain(op)) {
+
+      return StringSwitch<bool>(op)
+          .BeginWith("j",
+                     [&](auto&& _) {
+                       auto peekTokens = lexer.peekNextTokens<2>();
+                       if (peekTokens.back().type == TokenType::NEWLINE) {
+                         return true;
+                       } else {
+                         return false;
+                       }
+                     })
+          .Default([&](auto&& _) {
+            auto peekTokens = lexer.peekNextTokens<3>();
+            if (peekTokens.back().type == TokenType::NEWLINE) {
+              return true;
+            } else {
+              return false;
+            }
+          });
+
+    } else {
+      return PseudoContain(op);
+    }
+  }
 };
 
 } // namespace parser

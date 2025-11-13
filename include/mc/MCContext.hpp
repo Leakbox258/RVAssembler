@@ -158,21 +158,21 @@ public:
     return newOffset;
   }
 
-  template <typename... Args> MCInstPtrs newTextInsts(Args&&... OpCodes) {
-    MCInstPtrs insts{};
-
-    insts.emplace_back(newTextInst(OpCodes...));
-
-    return insts;
-  }
-
   template <std::size_t N>
-  MCInstPtrs newTextInsts(SmallVector<StringRef, N> Ops) {
+  MCInstPtrs newTextInsts(const SmallVector<StringRef, N>& Ops) {
     MCInstPtrs insts{};
 
     for (auto& op : Ops) {
       insts.emplace_back(newTextInst(op));
     }
+
+    return insts;
+  }
+
+  template <typename... Args> MCInstPtrs newTextInsts(Args&&... OpCodes) {
+    MCInstPtrs insts{};
+
+    insts.emplace_back(newTextInst(OpCodes...));
 
     return insts;
   }

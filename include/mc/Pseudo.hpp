@@ -9,8 +9,10 @@
 #include "utils/ADT/SmallVector.hpp"
 #include "utils/ADT/StringMap.hpp"
 #include "utils/lisp/lisp.hpp"
+#include "utils/misc.hpp"
 #include <array>
 #include <cstdint>
+#include <tuple>
 
 namespace {
 template <size_t N>
@@ -165,8 +167,8 @@ public:
     parseImpl(rootNode);
   }
 
-  constexpr void addOperand(MCContext& ctx, MCInst* Inst,
-                            const InstPattern& pattern, auto ArgsTuple) {
+  void addOperand(MCContext& ctx, MCInst* Inst, const InstPattern& pattern,
+                  auto ArgsTuple) const {
 
     for (uint32_t opCnt = 0; opCnt < pattern.opNr; ++opCnt) {
       const auto& opKind = pattern.Operands[opCnt];
@@ -198,61 +200,69 @@ public:
     }
   }
 
-  auto operator()() const {
-
-    /// input args
-
+  auto argEnableFlags() const {
     std::array<bool, std::tuple_size_v<Types>> flags = {
         rd, rt, rs, symbol, offset, immeNeg1, imme0, imme1};
+    return flags;
+  }
 
-    auto instsBuild = [this](MCContext& ctx, auto ArgsTuple) {
+  static auto getArgTuple() {
+    // Rd Symbol Rt Rs Offset
+    return std::tuple<MCReg, StringRef, MCReg, MCReg, StringRef>();
+  }
+
+  auto operator()() const {
+
+    auto instsBuild = [this](MCContext& ctx, auto... Args) {
+      auto ArgsTuple = std::make_tuple(Args...);
+
       SmallVector<StringRef, 4> Ops;
       for (uint32_t instCnt = 0; instCnt < InstNr; ++instCnt) {
         Ops.emplace_back(InstPatterns[instCnt].Op);
       }
 
-      MCInstPtrs insts = ctx.newTextInsts(Ops);
+      MCInstPtrs insts = ctx.newTextInsts<4>(Ops);
 
       int idx = 0;
-      for (auto& inst : insts) {
+      for (auto inst : insts) {
         addOperand(ctx, inst, InstPatterns[idx++], ArgsTuple);
       }
 
       ctx.commitTextInsts(insts);
     };
 
-    auto argNormalize = [&flags](auto... args) {
-      auto rawTuple = std::make_tuple(args...);
-      constexpr std::size_t argNr = std::tuple_size_v<decltype(rawTuple)>;
+    // auto argNormalize = [&flags](auto... args) {
+    //   auto rawTuple = std::make_tuple(args...);
+    //   constexpr std::size_t argNr = std::tuple_size_v<decltype(rawTuple)>;
 
-      auto ArgTuple = [&]<std::size_t... I>(std::index_sequence<I...>) {
-        auto getElem = [&]<std::size_t Idx>() {
-          constexpr std::size_t argIdx = [&flags]() {
-            std::size_t count = 0;
-            for (std::size_t k = 0; k < Idx; ++k) {
-              if (flags[k]) {
-                count++;
-              }
-            }
-            return count;
-          }();
+    //   auto ArgTuple = [&]<std::size_t... I>(std::index_sequence<I...>) {
+    //     auto getElem = [&]<std::size_t Idx>() {
+    //       constexpr std::size_t argIdx = [&flags]() {
+    //         std::size_t count = 0;
+    //         for (std::size_t k = 0; k < Idx; ++k) {
+    //           if (flags[k]) {
+    //             count++;
+    //           }
+    //         }
+    //         return count;
+    //       }();
 
-          if constexpr (flags[Idx] && argIdx < argNr) {
-            return std::tuple{std::get<argIdx>(rawTuple)};
-          } else {
-            return std::make_tuple(nullptr); // hold space
-          }
-        };
+    //       if constexpr (flags[Idx] && argIdx < argNr) {
+    //         return std::tuple{std::get<argIdx>(rawTuple)};
+    //       } else {
+    //         return std::make_tuple(nullptr); // hold space
+    //       }
+    //     };
 
-        return std::tuple_cat(getElem.template operator()<I>()...);
-      }(std::make_index_sequence<std::tuple_size_v<Types>>{});
+    //     return std::tuple_cat(getElem.template operator()<I>()...);
+    //   }(std::make_index_sequence<std::tuple_size_v<Types>>{});
 
-      return ArgTuple;
-    };
+    //   return ArgTuple;
+    // };
 
     /// return as a callback
-    return [instsBuild, argNormalize](MCContext& ctx, auto... args) {
-      instsBuild(argNormalize(args...));
+    return [instsBuild](MCContext& ctx, auto... args) {
+      instsBuild(ctx, args...);
     };
   }
 };
@@ -305,7 +315,7 @@ constexpr bool PseudoContain(const T& value) {
 }
 
 template <size_t I = 0, typename T>
-constexpr const mc::MCOpCode* PseudoFind(const T& value) {
+constexpr const mc::Pseudo* PseudoFind(const T& value) {
   if constexpr (I < std::tuple_size_v<decltype(PseudoMap)>) {
     if (PseudoContainImpl(std::get<I>(PseudoMap).first, value)) {
       return std::get<I>(PseudoMap).second;
