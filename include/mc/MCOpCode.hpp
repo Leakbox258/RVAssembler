@@ -277,9 +277,11 @@ namespace parser {
 /// NOTE: tuple<pair<array<N>, MCOpCode*>, ...>
 /// NOTE: avoid using std::make_tuple(), because of tailing comma
 #define INSTRUCTION(name, pattern) std::make_pair(MNEMONIC(name), &mc::name),
+
 constexpr inline auto MnemonicMap = std::tuple{
 #include "RISCV.def"
 };
+
 #undef INSTRUCTION
 
 template <size_t N>

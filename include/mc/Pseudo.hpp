@@ -198,7 +198,7 @@ public:
     }
   }
 
-  auto operator()() {
+  auto operator()() const {
 
     /// input args
 
@@ -221,13 +221,13 @@ public:
       ctx.commitTextInsts(insts);
     };
 
-    auto argNormalize = [this, &flags](auto... args) {
+    auto argNormalize = [&flags](auto... args) {
       auto rawTuple = std::make_tuple(args...);
       constexpr std::size_t argNr = std::tuple_size_v<decltype(rawTuple)>;
 
       auto ArgTuple = [&]<std::size_t... I>(std::index_sequence<I...>) {
         auto getElem = [&]<std::size_t Idx>() {
-          constexpr std::size_t argIdx = [this, &flags]() {
+          constexpr std::size_t argIdx = [&flags]() {
             std::size_t count = 0;
             for (std::size_t k = 0; k < Idx; ++k) {
               if (flags[k]) {
@@ -270,7 +270,51 @@ public:
 } // namespace mc
 
 namespace parser {
-#define PSEUDO_TLB(name) processPseudo(#name)
+#define PSEUDO_NAME(name) processPseudo(#name)
+
+#define PSEUDO(name, pattern)                                                  \
+  std::make_pair(PSEUDO_NAME(name), &mc::name##_pseudo),
+
+constexpr inline auto PseudoMap = std::tuple{
+#include "Pseudo.def"
+};
+
+#undef PSEUDO
+
+template <size_t N>
+constexpr bool PseudoContainImpl(const std::array<char, N>& arr,
+                                 const char* c_str) {
+  for (size_t i = 0; i < N; ++i) {
+    if (arr[i] != c_str[i])
+      return false;
+    if (c_str[i] == '\0')
+      return arr[i] == '\0';
+  }
+  return c_str[N] == '\0';
+}
+
+template <size_t I = 0, typename T>
+constexpr bool PseudoContain(const T& value) {
+  if constexpr (I < std::tuple_size_v<decltype(PseudoMap)>) {
+    if (PseudoContainImpl(std::get<I>(PseudoMap).first, value)) {
+      return true;
+    }
+    return PseudoContain<I + 1>(value);
+  }
+  return false;
+}
+
+template <size_t I = 0, typename T>
+constexpr const mc::MCOpCode* PseudoFind(const T& value) {
+  if constexpr (I < std::tuple_size_v<decltype(PseudoMap)>) {
+    if (PseudoContainImpl(std::get<I>(PseudoMap).first, value)) {
+      return std::get<I>(PseudoMap).second;
+    }
+    return PseudoFind<I + 1>(value);
+  }
+  return nullptr;
+}
+
 } // namespace parser
 
 #endif
