@@ -271,43 +271,42 @@ void Parser::ParseHexInteger() {
 }
 
 void Parser::ParseFloat() {
-  /// TODO: pseudo instruction
-  {
-    utils_assert(!DirectiveStack.empty(), "expecting in an directive");
-    auto [fimm, isDouble] =
-        StringSwitch<std::tuple<uint64_t, bool>>(DirectiveStack.back())
-            .Case(".float",
-                  [](auto&& Str) -> std::tuple<uint64_t, bool> {
-                    float value;
-                    auto [ptr, ec] = std::from_chars(
-                        Str.data(), Str.data() + Str.size(), value);
 
-                    utils_assert(ec == std::error_code{},
-                                 "parse float point failed");
+  utils_assert(!DirectiveStack.empty(), "expecting in an directive");
+  auto [fimm, isDouble] =
+      StringSwitch<std::tuple<uint64_t, bool>>(DirectiveStack.back())
+          .Case(".float",
+                [](auto&& Str) -> std::tuple<uint64_t, bool> {
+                  float value;
+                  auto [ptr, ec] = std::from_chars(
+                      Str.data(), Str.data() + Str.size(), value);
 
-                    return std::make_tuple(*reinterpret_cast<uint64_t*>(&value),
-                                           false);
-                  })
-            .Case(".double",
-                  [](auto&& Str) -> std::tuple<uint64_t, bool> {
-                    double value;
-                    auto [ptr, ec] = std::from_chars(
-                        Str.data(), Str.data() + Str.size(), value);
+                  utils_assert(ec == std::error_code{},
+                               "parse float point failed");
 
-                    utils_assert(ec == std::error_code{},
-                                 "parse float point failed");
+                  return std::make_tuple(*reinterpret_cast<uint64_t*>(&value),
+                                         false);
+                })
+          .Case(".double",
+                [](auto&& Str) -> std::tuple<uint64_t, bool> {
+                  double value;
+                  auto [ptr, ec] = std::from_chars(
+                      Str.data(), Str.data() + Str.size(), value);
 
-                    return std::make_tuple(*reinterpret_cast<uint64_t*>(&value),
-                                           false);
-                  })
-            .Default();
+                  utils_assert(ec == std::error_code{},
+                               "parse float point failed");
 
-    if (isDouble) {
-      ctx.pushDataBuf(fimm);
-    } else {
-      ctx.pushDataBuf(static_cast<uint32_t>(fimm));
-    }
+                  return std::make_tuple(*reinterpret_cast<uint64_t*>(&value),
+                                         false);
+                })
+          .Default();
+
+  if (isDouble) {
+    ctx.pushDataBuf(fimm);
+  } else {
+    ctx.pushDataBuf(static_cast<uint32_t>(fimm));
   }
+
   advance();
 }
 
@@ -394,7 +393,8 @@ void Parser::ParsePseudo() {
       ++regCnt;
     } break;
     case TokenType::IDENTIFIER: // assign once
-      std::get<1>(args) = std::get<4>(args) = token.lexeme.c_str();
+      std::get<1>(args) = token.lexeme.c_str();
+      std::get<4>(args) = token.lexeme.c_str();
       break;
     default:
       utils::unreachable("unknown item when unpacking pseudo");

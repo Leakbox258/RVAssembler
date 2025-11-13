@@ -46,6 +46,8 @@ void MCContext::Relo() {
       utils_assert(offset % 2 == 0,
                    "offset in .text should be align to as least 2");
 
+      inst->fixRiscvRType<false>();
+
       inst->reloSym(offset);
 
     }
@@ -56,6 +58,8 @@ void MCContext::Relo() {
              iter != Symbols.end()) {
 
       auto [sym, _] = *iter;
+
+      inst->fixRiscvRType<true>();
 
       Elf64_Rela Rela = {};
       Rela.r_offset = inst->getOffset();
@@ -76,6 +80,8 @@ void MCContext::Relo() {
     /// else: the sym will be extern symbol
     else {
       this->ExternSymbols.insert(sym);
+
+      inst->fixRiscvRType<true>();
 
       Elf64_Rela Rela = {};
       Rela.r_offset = inst->getOffset();

@@ -9,17 +9,11 @@
 #include "utils/ADT/StringRef.hpp"
 #include "utils/ADT/StringSet.hpp"
 #include "utils/macro.hpp"
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
 #include <deque>
 #include <elf.h>
 #include <fstream>
 #include <ostream>
 #include <set>
-#include <string>
-#include <utility>
-#include <vector>
 
 namespace mc {
 using StringRef = utils::ADT::StringRef;
@@ -38,9 +32,6 @@ private:
 
   /// inst use symbols, which need gen Elf64_Rela or cul offset(.text)
   std::set<std::tuple<MCInst*, std::string>> ReloInst;
-
-  /// buffer
-  // ByteStream<> TextBuffer;
 
   /// ELF Header
   Elf64_Ehdr Elf_Ehdr;
@@ -187,14 +178,14 @@ public:
     return newOffset;
   }
 
-  const MCExpr* getTextExpr(std::string Symbol, MCExpr::ExprTy ty,
-                            uint64_t Append = 0) {
+  MCExpr* getTextExpr(std::string Symbol, MCExpr::ExprTy ty,
+                      uint64_t Append = 0) {
     Exprs.emplace_back(ty, Symbol, Append);
     return &Exprs.back();
   }
 
-  const MCExpr* getTextExpr(StringRef Symbol, MCExpr::ExprTy ty,
-                            uint64_t Append = 0) {
+  MCExpr* getTextExpr(StringRef Symbol, MCExpr::ExprTy ty,
+                      uint64_t Append = 0) {
     Exprs.emplace_back(ty, Symbol, Append);
     return &Exprs.back();
   }

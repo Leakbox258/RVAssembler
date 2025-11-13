@@ -3,8 +3,7 @@
 
 #include "utils/ADT/StringRef.hpp"
 #include "utils/ADT/StringSwitch.hpp"
-#include <cstdint>
-#include <utility>
+
 namespace mc {
 using StringRef = utils::ADT::StringRef;
 
@@ -54,7 +53,10 @@ public:
   bool isTLS_GD_PCREL_HI() const { return Kind == kTLS_GD_PCREL_HI; }
 
   StringRef getSym() const { return Symbol; }
+
   ExprTy getModifier() const { return Kind; }
+  void setModifier(ExprTy ty) { Kind = ty; }
+
   uint64_t getAppend() const { return Append; }
 
   /// TODO: dump

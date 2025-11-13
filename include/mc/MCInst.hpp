@@ -7,9 +7,6 @@
 #include "utils/ADT/SmallVector.hpp"
 #include "utils/macro.hpp"
 #include "utils/source.hpp"
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
 
 namespace mc {
 
@@ -106,9 +103,33 @@ public:
                         [&](const MCOperand& op) { return op.isExpr(); });
   }
 
+  MCOperand* getExprOp() {
+    return std::find_if(Operands.begin(), Operands.end(),
+                        [&](const MCOperand& op) { return op.isExpr(); });
+  }
+
   MCExpr::ExprTy getExprTy() const;
 
   uint32_t getRiscvRType() const;
+
+  template <bool ExternSym> void fixRiscvRType() {
+    using ExprTy = MCExpr::ExprTy;
+
+    auto ty = getExprTy();
+
+    utils_assert(ty != MCExpr::kInvalid, "unknown relo type");
+
+    if (utils::in_set(ty, MCExpr::gHI, MCExpr::gLO)) {
+      if (ExternSym)
+        getExprOp()->setExpr(utils::in_set_map<ExprTy, ExprTy>(
+            ty, MCExpr::gHI, MCExpr::kGOT_PCREL_HI, MCExpr::gLO,
+            MCExpr::kPCREL_LO));
+      else
+        getExprOp()->setExpr(utils::in_set_map<ExprTy, ExprTy>(
+            ty, MCExpr::gHI, MCExpr::kPCREL_HI, MCExpr::gLO,
+            MCExpr::kPCREL_LO));
+    }
+  }
 
   constexpr static MCInst makeNop(Location Loc, size_ty Offset) {
     auto nop = MCInst(parser::MnemonicFind("addi"), Loc, Offset);

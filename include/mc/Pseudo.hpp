@@ -13,6 +13,7 @@
 #include <array>
 #include <cstdint>
 #include <tuple>
+#include <type_traits>
 
 namespace {
 template <size_t N>
@@ -55,7 +56,7 @@ public:
   };
 
   static constexpr auto argTbl = std::make_tuple(
-      Rd, Rt, Rs, Symbol, Offset, ImmeNeg1, Imme0, Imme1, X0, X1, X6);
+      Rd, Symbol, Rt, Rs, Offset, ImmeNeg1, Imme0, Imme1, X0, X1, X6);
   using Types = decltype(argTbl);
 
 private:
@@ -178,17 +179,30 @@ public:
           Inst->addOperand(
               MCOperand::make((uint32_t)opKind - ImmeNeg1 - 1)); // -1, 0, 1
         } else if (opKind >= X0) {
-          Inst->addOperand(MCOperand::make((MCReg)opKind - X0)); // x0, x1, x6
-        } else if (opKind == Symbol || opKind == Offset) {
-          auto& sym = std::get<I>(ArgsTuple);
-
-          Inst->addOperand(
-              MCOperand::make(ctx.getTextExpr(sym, pattern.reloTy)));
-
-          ctx.addReloInst(Inst, sym);
+          Inst->addOperand(MCOperand::make(MCReg(opKind - X0))); // x0, x1, x6
         } else {
-          Inst->addOperand(MCOperand::make(std::get<I>(ArgsTuple)));
+          /// avoid clang may-analysis type-invoke check
+          auto arg = std::get<I>(ArgsTuple);
+
+          if constexpr (std::is_same_v<decltype(arg), StringRef>) {
+            Inst->addOperand(
+                MCOperand::make(ctx.getTextExpr(arg, pattern.reloTy)));
+
+            ctx.addReloInst(Inst, arg.str());
+          } else if constexpr (std::is_same_v<decltype(arg), MCReg>) {
+            Inst->addOperand(MCOperand::make(arg));
+          }
         }
+        // else if (utils::in_set(opKind, Symbol, Offset)) {
+        //   auto& sym = std::get<I>(ArgsTuple);
+
+        //   Inst->addOperand(
+        //       MCOperand::make(ctx.getTextExpr(sym, pattern.reloTy)));
+
+        //   ctx.addReloInst(Inst, sym.str());
+        // } else {
+        //   Inst->addOperand(MCOperand::make(std::get<I>(ArgsTuple)));
+        // }
       };
 
       [&]<std::size_t... I>(std::index_sequence<I...>) {
@@ -200,15 +214,10 @@ public:
     }
   }
 
-  auto argEnableFlags() const {
-    std::array<bool, std::tuple_size_v<Types>> flags = {
-        rd, rt, rs, symbol, offset, immeNeg1, imme0, imme1};
-    return flags;
-  }
-
   static auto getArgTuple() {
     // Rd Symbol Rt Rs Offset
-    return std::tuple<MCReg, StringRef, MCReg, MCReg, StringRef>();
+    return std::tuple<MCReg, StringRef, MCReg, MCReg, StringRef, void*, void*,
+                      void*, void*, void*, void*>();
   }
 
   auto operator()() const {

@@ -196,24 +196,6 @@ Token Lexer::scanString() {
   return makeToken(TokenType::STRING_LITERAL, lexeme);
 }
 
-template <std::size_t N> SmallVector<Token, N> Lexer::peekNextTokens() {
-  SmallVector<Token, N> tokens{};
-
-  auto s_m_cursor = m_cursor;
-  auto s_m_line = m_line;
-  auto s_m_col = m_col;
-
-  for (auto i = 0ll; i < N; ++i) {
-    tokens.emplace_back(this->nextToken());
-  }
-
-  m_cursor = s_m_cursor;
-  m_line = s_m_line;
-  m_col = s_m_col;
-
-  return tokens;
-}
-
 Token Lexer::nextToken() {
   skipWhitespaceAndComments();
 

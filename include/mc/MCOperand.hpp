@@ -1,6 +1,7 @@
 #ifndef MC_OPERAND
 #define MC_OPERAND
 
+#include "mc/MCExpr.hpp"
 #include "utils/ADT/StringMap.hpp"
 #include "utils/macro.hpp"
 #include "utils/misc.hpp"
@@ -75,7 +76,7 @@ class MCOperand {
     int64_t Imm;
     uint32_t SFPImm;
     uint64_t DFPImm;
-    const MCExpr* Expr;
+    MCExpr* Expr;
     const MCInst* Inst;
   };
 
@@ -122,7 +123,7 @@ public:
     return op;
   }
 
-  static MCOperand makeExpr(const MCExpr* _Expr) {
+  static MCOperand makeExpr(MCExpr* _Expr) {
     MCOperand op;
 
     op.Expr = std::move(_Expr);
@@ -214,6 +215,11 @@ public:
   const MCExpr* getExpr() const {
     utils_assert(isExpr(), "not an expression");
     return Expr;
+  }
+
+  void setExpr(MCExpr::ExprTy ty) {
+    utils_assert(isExpr(), "not an expression");
+    Expr->setModifier(ty);
   }
 
   const MCInst* getInst() const {
