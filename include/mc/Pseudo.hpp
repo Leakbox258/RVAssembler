@@ -12,6 +12,7 @@
 #include "utils/misc.hpp"
 #include <array>
 #include <cstdint>
+#include <string>
 #include <tuple>
 #include <type_traits>
 
@@ -80,14 +81,17 @@ private:
        x6 = false;
 
   constexpr void parseImpl(LispNode* rootNode) {
-
     for (uint32_t sonCnt = 0; sonCnt < rootNode->sonNr; ++sonCnt) {
       auto& son = rootNode->sons[sonCnt];
       auto& inst = InstPatterns[InstNr++];
-      inst.Op = son->content.data();
+      inst.Op = son->content;
 
       /// @note enum the items that may appear in .def file
       for (auto operand : son->sons) {
+        if (!operand) {
+          break;
+        }
+
         auto op = StringSwitch<OperandKind>(operand->content)
                       .Case("rd",
                             [this](auto&& _) {
@@ -104,13 +108,13 @@ private:
                               rs = true;
                               return Rs;
                             })
-                      .Case("%hi20",
+                      .Case("%hi",
                             [this, &inst](auto&& _) {
                               symbol = true;
                               inst.reloTy = MCExpr::gHI;
                               return Symbol;
                             })
-                      .Case("%lo12",
+                      .Case("%lo",
                             [this, &inst](auto&& _) {
                               symbol = true;
                               inst.reloTy = MCExpr::gLO;
@@ -151,7 +155,7 @@ private:
                               x6 = true;
                               return X6;
                             })
-                      .Error();
+                      .Default(Rd); /// just to make clang happy
 
         inst.push(op);
       }
@@ -184,11 +188,11 @@ public:
           /// avoid clang may-analysis type-invoke check
           auto arg = std::get<I>(ArgsTuple);
 
-          if constexpr (std::is_same_v<decltype(arg), StringRef>) {
+          if constexpr (std::is_same_v<decltype(arg), std::string>) {
             Inst->addOperand(
                 MCOperand::make(ctx.getTextExpr(arg, pattern.reloTy)));
 
-            ctx.addReloInst(Inst, arg.str());
+            ctx.addReloInst(Inst, arg);
           } else if constexpr (std::is_same_v<decltype(arg), MCReg>) {
             Inst->addOperand(MCOperand::make(arg));
           }
@@ -216,8 +220,8 @@ public:
 
   static auto getArgTuple() {
     // Rd Symbol Rt Rs Offset
-    return std::tuple<MCReg, StringRef, MCReg, MCReg, StringRef, void*, void*,
-                      void*, void*, void*, void*>();
+    return std::tuple<MCReg, std::string, MCReg, MCReg, std::string, void*,
+                      void*, void*, void*, void*, void*>();
   }
 
   auto operator()() const {
@@ -226,18 +230,20 @@ public:
       auto ArgsTuple = std::make_tuple(Args...);
 
       SmallVector<StringRef, 4> Ops;
-      for (uint32_t instCnt = 0; instCnt < InstNr; ++instCnt) {
-        Ops.emplace_back(InstPatterns[instCnt].Op);
+      for (uint32_t instCnt = 0; instCnt < this->InstNr; ++instCnt) {
+        Ops.emplace_back(this->InstPatterns[instCnt].Op);
       }
 
       MCInstPtrs insts = ctx.newTextInsts<4>(Ops);
 
       int idx = 0;
       for (auto inst : insts) {
-        addOperand(ctx, inst, InstPatterns[idx++], ArgsTuple);
+        addOperand(ctx, inst, this->InstPatterns[idx++], ArgsTuple);
       }
 
       ctx.commitTextInsts(insts);
+
+      return insts;
     };
 
     // auto argNormalize = [&flags](auto... args) {
@@ -271,7 +277,7 @@ public:
 
     /// return as a callback
     return [instsBuild](MCContext& ctx, auto... args) {
-      instsBuild(ctx, args...);
+      return instsBuild(ctx, args...);
     };
   }
 };
@@ -282,7 +288,7 @@ public:
   static constexpr Pseudo name##_pseudo{_##name##_pseudo,                      \
                                         _##name##_pseudo##_Pattern};
 
-#define PSEUDO(name, patternd) PSEUDO_DEF(name, pattern)
+#define PSEUDO(name, pattern) PSEUDO_DEF(name, pattern)
 #include "Pseudo.def"
 #undef PSEUDO
 

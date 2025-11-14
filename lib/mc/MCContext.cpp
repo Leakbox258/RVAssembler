@@ -46,8 +46,6 @@ void MCContext::Relo() {
       utils_assert(offset % 2 == 0,
                    "offset in .text should be align to as least 2");
 
-      inst->fixRiscvRType<false>();
-
       inst->reloSym(offset);
 
     }

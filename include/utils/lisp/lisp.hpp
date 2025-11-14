@@ -41,7 +41,7 @@ public:
 
   constexpr Lisp(const StringRef _source) : sourceCode(_source) { parse(); }
 
-  constexpr LispNode* getRoot() { return curRoot; }
+  constexpr LispNode* getRoot() { return &tree[0]; }
 
 private:
   constexpr void parse() {

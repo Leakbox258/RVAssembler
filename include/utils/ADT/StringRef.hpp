@@ -133,17 +133,17 @@ public:
   /// c-style char array
   template <std::size_t N>
   [[nodiscard]] constexpr bool operator==(const char (&Array)[N]) const {
-    if (this->size() != N) {
+    if (this->size() != N - 1) { // '\x00'
       return false;
     }
 
-    return !utils::memcmp(this->data(), Array, N);
+    return !utils::memcmp(this->data(), Array, this->size());
   }
 
   /// check if the String the same
   template <typename T>
     requires ViewType<T, std::decay_t<decltype(Data)>>
-  [[nodiscard]] bool operator==(T&& StrRef) const {
+  [[nodiscard]] constexpr bool operator==(T&& StrRef) const {
     if (StrRef.size() != this->size()) {
       return false;
     }
@@ -244,8 +244,8 @@ public:
   }
 };
 
-[[nodiscard]] inline bool operator==(const StringRef& StrRef0,
-                                     const StringRef& StrRef1) {
+[[nodiscard]] constexpr inline bool operator==(const StringRef& StrRef0,
+                                               const StringRef& StrRef1) {
   if (StrRef0.size() != StrRef1.size()) {
     return false;
   }

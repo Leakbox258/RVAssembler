@@ -3,8 +3,8 @@
 PSEUDO(LA, ( auipc rd %hi ) ( addi rd rd %lo ) )
 PSEUDO(LD, ( auipc rd %hi ) ( ld rd rd %lo ) ) // conflict
 PSEUDO(SD, ( auipc rt %hi ) ( sd rd rd %lo ) )	// conflict
-PSEUDO(FLD, ( ( auipc rt %hi ) ( fld rd rt %lo ) ) ) // conflict
-PSEUDO(FSD, ( ( auipc rt %hi ) ( fsd rd rt %lo ) ) ) // conflict
+PSEUDO(FLD, ( auipc rt %hi ) ( fld rd rt %lo ) ) // conflict
+PSEUDO(FSD, ( auipc rt %hi ) ( fsd rd rt %lo ) ) // conflict
 
 PSEUDO(NOP, ( addi x0, x0, 0 ) )
 // PSEUDO(LI)
@@ -42,5 +42,5 @@ PSEUDO(JAL, ( jal x1 offset )) // conflict
 PSEUDO(JR, ( jalr x0 rs 0 ) )
 PSEUDO(JALR, ( jalr x1 rs 0 ) ) // conflict
 PSEUDO(RET, ( jalr x0 x1 0 ) )
-PSEUDO(CALL, ( ( auipc x1 %hi ) ( jalr x1 x1 %lo ) ) )
-PSEUDO(TAIL, ( ( auipc x, %hi ) ( jalr x0 x6 %lo ) ) )
+PSEUDO(CALL, ( auipc x1 %hi ) ( jalr x1 x1 %lo ) )
+PSEUDO(TAIL, ( auipc x6 %hi ) ( jalr x0 x6 %lo ) )

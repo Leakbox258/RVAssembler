@@ -1,5 +1,6 @@
 #include "utils/ADT/SmallVector.hpp"
 #include "utils/ADT/StringRef.hpp"
+#include "utils/lisp/lisp.hpp"
 #include "utils/misc.hpp"
 #include <cstdio>
 #include <print>
@@ -8,56 +9,87 @@ template <typename T, std::size_t N>
 using SmallVector = utils::ADT::SmallVector<T, N>;
 
 int main() {
-  SmallVector<uint64_t, 4> array;
+  utils::ADT::StringRef str("   ( auipc x1 %hi ) ( jalr x1 x1 %lo )  ");
 
-  array.push_back(114514);
+  utils::lisp::Lisp lisp(str);
 
-  std::print("array size: {}\n", array.size());
-  std::print("array[0]: {}\n", array[0]);
+  auto rootNode = lisp.getRoot();
 
-  utils::ADT::StringRef str("rs0[4:0]");
-  std::print("str num: {}\n",
-             utils::stoi(str.slice(6, str.size() - 2).c_str(), 1));
+  for (uint32_t sonCnt = 0; sonCnt < rootNode->sonNr; ++sonCnt) {
+    auto& son = rootNode->sons[sonCnt];
 
-  utils::ADT::StringRef range("11:0");
+    /// @note enum the items that may appear in .def file
+    for (auto operand : son->sons) {
+      if (!operand) {
+        continue;
+      }
 
-  int length = 0;
-  for (auto pattern : range.split<8>('|')) {
-
-    if (pattern.empty()) {
-      continue;
+      StringSwitch<bool>(operand->content)
+          .Case("rd",
+                [](auto&& _) {
+                  std::printf("rd ");
+                  return true;
+                })
+          .Case("rt",
+                [](auto&& _) {
+                  std::printf("rt ");
+                  return true;
+                })
+          .Case("rs",
+                [](auto&& _) {
+                  std::printf("rs ");
+                  return true;
+                })
+          .Case("%hi",
+                [](auto&& _) {
+                  std::printf("%%hi ");
+                  return true;
+                })
+          .Case("%lo",
+                [](auto&& _) {
+                  std::printf("%%lo ");
+                  return true;
+                })
+          .Case("offset",
+                [](auto&& _) {
+                  std::printf("off ");
+                  return true;
+                })
+          .Case("0",
+                [](auto&& _) {
+                  std::printf("0 ");
+                  return true;
+                })
+          .Case("1",
+                [](auto&& _) {
+                  std::printf("1 ");
+                  return true;
+                })
+          .Case("-1",
+                [](auto&& _) {
+                  std::printf("-1 ");
+                  return true;
+                })
+          .Case("x0",
+                [](auto&& _) {
+                  std::printf("x0 ");
+                  return true;
+                })
+          .Case("x1",
+                [](auto&& _) {
+                  std::printf("x1 ");
+                  return true;
+                })
+          .Case("x6",
+                [](auto&& _) {
+                  std::printf("x6 ");
+                  return true;
+                })
+          .Default([](auto&& _) {
+            std::printf("%s ", _.str().c_str());
+            return true;
+          });
     }
-
-    auto nums = pattern.split<8>(':');
-
-    auto high = nums[0];
-    auto low = nums[1].empty() ? nums[0] : nums[1];
-
-    auto high_bit = utils::stoi(high.c_str(), high.size());
-    auto low_bit = utils::stoi(low.c_str(), low.size());
-
-    length += high_bit - low_bit + 1;
-  }
-  std::print("length: {}\n", length);
-
-  // utils::ADT::StringRef pattern(
-  //     "offset[12|10:5] rs2[4:0] rs1[4:0] 000 offset[4:1|11] 1100011");
-
-  // auto pattern_array = pattern.split<8>(' ');
-
-  // for (auto& pat : pattern_array) {
-  //   // std::printf("%s\n", pat.c_str());
-  // }
-
-  utils::ADT::StringRef pattern2("[20|10:1|11|19:12]");
-
-  auto pattern_array2 = pattern2.slice(1, pattern2.size() - 1).split<8>('|');
-
-  std::printf("%s size: %ld \n", pattern2.slice(1, pattern2.size() - 1).c_str(),
-              pattern2.slice(1, pattern2.size() - 1).size());
-
-  for (auto& pat2 : pattern_array2) {
-    std::printf("%s size: %ld\n", pat2.c_str(), pat2.size());
   }
 
   return 0;

@@ -169,9 +169,10 @@ public:
   }
 
   size_ty commitTextInsts(const MCInstPtrs& insts) {
-    size_ty newOffset = 0LL;
+    size_ty newOffset;
 
-    for (const auto& inst : insts) {
+    for (auto& inst : insts) {
+      inst->modifyOffset(TextOffset);
       newOffset = incTextOffset(inst->isCompressed());
     }
 

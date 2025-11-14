@@ -20,9 +20,16 @@ using namespace mc;
 void Parser::advance() { token = this->lexer.nextToken(); }
 
 uint8_t Parser::RegHelper(const StringRef& reg) {
-  utils_assert(curInst, "expect curInst to be valid");
-  auto find_reg =
-      curInst->isCompressed() ? CRegisters.find(reg) : Registers.find(reg);
+
+  const unsigned char* find_reg;
+  if (curInst) {
+    find_reg =
+        curInst->isCompressed() ? CRegisters.find(reg) : Registers.find(reg);
+  } else {
+    /// Pseudo
+    find_reg = Registers.find(reg);
+  }
+
   utils_assert(find_reg, "invalid register literal");
   return *find_reg;
 }
@@ -393,15 +400,31 @@ void Parser::ParsePseudo() {
       ++regCnt;
     } break;
     case TokenType::IDENTIFIER: // assign once
-      std::get<1>(args) = token.lexeme.c_str();
-      std::get<4>(args) = token.lexeme.c_str();
+      std::get<1>(args) = token.lexeme;
+      std::get<4>(args) = token.lexeme;
       break;
+    case TokenType::COMMA:
+      continue;
+    case TokenType::END_OF_FILE:
+      goto __call_back;
     default:
       utils::unreachable("unknown item when unpacking pseudo");
     }
   }
 
-  std::apply(pseudo(), std::tuple_cat(std::make_tuple(std::ref(ctx)), args));
+__call_back:
+  /// make align
+  auto [instAlign, padInst] =
+      std::make_tuple(4, MCInst::makeNop(token.loc, curOffset));
+
+  if (curOffset % instAlign) {
+    curOffset = ctx.addTextInst(std::move(padInst));
+  }
+
+  for (auto inst : std::apply(
+           pseudo(), std::tuple_cat(std::make_tuple(std::ref(ctx)), args))) {
+    curOffset += inst->isCompressed() ? 2 : 4;
+  }
 }
 
 void Parser::ParseRegister() {

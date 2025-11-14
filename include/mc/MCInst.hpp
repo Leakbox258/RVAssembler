@@ -25,7 +25,7 @@ private:
 
 public:
   explicit MCInst(const StringRef& _OpCode LIFETIME_BOUND)
-      : OpCode(parser::MnemonicFind(_OpCode.c_str())) {}
+      : OpCode(parser::MnemonicFind(_OpCode.str().c_str())) {}
 
   explicit MCInst(const MCOpCode* _OpCode LIFETIME_BOUND) : OpCode(_OpCode) {}
 
@@ -35,7 +35,7 @@ public:
 
   explicit MCInst(const StringRef& _OpCode LIFETIME_BOUND, Location _Loc,
                   size_ty _Offset)
-      : OpCode(parser::MnemonicFind(_OpCode.c_str())), Loc(_Loc),
+      : OpCode(parser::MnemonicFind(_OpCode.str().c_str())), Loc(_Loc),
         Offset(_Offset) {}
 
   [[nodiscard]] decltype(Operands)::size_ty getOpSize() const {
