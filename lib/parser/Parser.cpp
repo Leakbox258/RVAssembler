@@ -75,7 +75,7 @@ void Parser::parse() {
       ParseIdentifier();
       break;
     case TokenType::INTEGER:
-      ParseDirective();
+      ParseInteger();
       break;
     case TokenType::HEX_INTEGER:
       ParseHexInteger();
@@ -453,7 +453,7 @@ void Parser::ParseDirective() {
     DirectiveStack.pop_back();
   }
 
-  DirectiveStack.push_back(token.lexeme);
+  DirectiveStack.emplace_back(token.lexeme);
 
   advance();
 }
