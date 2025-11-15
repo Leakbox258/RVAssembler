@@ -1,4 +1,5 @@
 #include "mc/MCContext.hpp"
+#include "mc/MCExpr.hpp"
 #include "utils/macro.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -137,7 +138,11 @@ void MCContext::Relo() {
 
     Rela.r_addend = inst->getExprOp()->getExpr()->getAddend();
 
-    inst->reloSym(0ll);
+    if (MCExpr::isStaticOffset(inst->getExprTy()))
+      inst->reloSym(*TextLabels.find(sym) -
+                    inst->getOffset()); // offset of the label
+    else
+      inst->reloSym(0ll);
 
     Elf_Relas.emplace_back(std::move(Rela));
 

@@ -228,7 +228,7 @@ public:
   }
 
   /// encoding here expected to be processed
-  void RewriteSymRelo(uint64_t encoding) {
+  void RewriteSymRelo(int64_t encoding) {
     utils_assert(isExpr(), "expecting to have at least one expr*");
 
     /// change Kind

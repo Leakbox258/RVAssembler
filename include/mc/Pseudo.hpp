@@ -48,6 +48,7 @@ public:
     Rs,
     Rt,
     Offset,
+    /// input non-related
     ImmeNeg1,
     Imme0,
     Imme1,
@@ -59,6 +60,9 @@ public:
   static constexpr auto argTbl = std::make_tuple(
       Rd, Symbol, Rs, Rt, Offset, ImmeNeg1, Imme0, Imme1, X0, X1, X6);
   using Types = decltype(argTbl);
+  bool rd = false, rt = false, rs = false, symbol = false, offset = false,
+       imme0 = false, imme1 = false, immeNeg1 = false, x0 = false, x1 = false,
+       x6 = false;
 
 private:
   struct InstPattern {
@@ -75,10 +79,6 @@ private:
 
   std::array<InstPattern, 4> InstPatterns{};
   uint32_t InstNr = 0;
-
-  bool rd = false, rt = false, rs = false, symbol = false, offset = false,
-       imme0 = false, imme1 = false, immeNeg1 = false, x0 = false, x1 = false,
-       x6 = false;
 
   constexpr void parseImpl(LispNode* rootNode) {
     for (uint32_t sonCnt = 0; sonCnt < rootNode->sonNr; ++sonCnt) {
@@ -216,11 +216,15 @@ public:
                   ctx.getTextExpr(inner_label, pattern.reloTy)));
               ctx.addReloInst(Inst, inner_label);
             } else {
+              /// br / jr / call_plt / hi
+
               Inst->addOperand(
                   MCOperand::make(ctx.getTextExpr(arg, pattern.reloTy)));
               ctx.addReloInst(Inst, arg);
             }
-            Inst->relax();
+
+            if (InstNr > 1)
+              Inst->relax();
           } else if constexpr (std::is_same_v<decltype(arg), MCReg>) {
             Inst->addOperand(MCOperand::make(arg));
           }

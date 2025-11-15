@@ -11,19 +11,13 @@ using namespace mc;
 
 void MCInst::reloSym(int64_t offset) {
 
-  if (auto mod = getModifier()) {
+  if (auto _ = getModifier()) {
     auto op = std::find_if(Operands.begin(), Operands.end(),
                            [&](MCOperand& op) { return op.isExpr(); });
-    op->RewriteSymRelo(utils::signIntCompress(offset, getModifierSize(mod)));
+    op->RewriteSymRelo(offset);
   } else {
-    // usually branch & jumps without any explicit modifier
-    auto op = std::find_if(Operands.begin(), Operands.end(),
-                           [&](MCOperand& op) { return op.isImm(); });
-    auto& imm = op->getImm();
-    imm = offset;
+    utils::unreachable("");
   }
-
-  return;
 }
 
 MCExpr::ExprTy MCInst::getExprTy() const {

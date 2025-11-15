@@ -16,16 +16,14 @@ main:
 	bgez a1, main_0
 	bltz a1, main_0
 	bgtz a1, main_0
-	j main_0
-	jr a1
-	ret
 	ld a0, foo
 	ld a1, main_0
 	call end
 	tail end
+	j main_0
+	jr a1
 main_0:
 # non x0 related pseudo instructions
-	# li a0, 42
 	mv a0, a1
 	not a0, a1
 	seqz a0, a1
@@ -39,3 +37,4 @@ main_0:
 .globl end
 end:
 	mv a1, a0
+	ret

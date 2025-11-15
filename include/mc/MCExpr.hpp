@@ -3,6 +3,8 @@
 
 #include "utils/ADT/StringRef.hpp"
 #include "utils/ADT/StringSwitch.hpp"
+#include "utils/misc.hpp"
+#include <utility>
 
 namespace mc {
 using StringRef = utils::ADT::StringRef;
@@ -31,6 +33,10 @@ public:
     kCALL_PLT,
     /// TODO: kCALL
   };
+
+  static bool isStaticOffset(ExprTy ty) {
+    return utils::in_interval<true, true>(kJAL, kRVC_BRANCH, ty);
+  }
 
 private:
   ExprTy Kind = kInvalid;

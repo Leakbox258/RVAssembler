@@ -394,20 +394,20 @@ void Parser::ParsePseudo() {
   /// collecting arguments
 
   auto& pseudo = *PseudoFind(token.lexeme.c_str());
-  uint32_t regCnt = 0;
+  bool rd = pseudo.rd, rs = pseudo.rs, rt = pseudo.rt;
+
   auto args = pseudo.getArgTuple();
 
   while ((advance(), token.type != TokenType::NEWLINE)) {
     switch (token.type) {
     case TokenType::REGISTER: {
       auto reg = RegHelper(token.lexeme);
-      if (regCnt == 0)
-        std::get<0>(args) = reg;
-      else if (regCnt == 1)
-        std::get<2>(args) = reg;
-      else if (regCnt == 2)
-        std::get<3>(args) = reg;
-      ++regCnt;
+      if (rd)
+        std::get<0>(args) = reg, rd = false;
+      else if (rs)
+        std::get<2>(args) = reg, rs = false;
+      else if (rt)
+        std::get<3>(args) = reg, rt = false;
     } break;
     case TokenType::IDENTIFIER: // assign once
       std::get<1>(args) = token.lexeme;
