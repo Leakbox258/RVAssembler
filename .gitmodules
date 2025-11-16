@@ -1,0 +1,4 @@
+[submodule "gnalc"]
+	path = 3rd-party/gnalc
+	url = https://github.com/0x676e616c63/gnalc.git
+	branch = main
