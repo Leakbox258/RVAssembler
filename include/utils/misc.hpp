@@ -181,7 +181,7 @@ inline int ctz_wrapper(unsigned long long vic) {
   return vic ? __builtin_ctzll(vic) : 0;
 }
 
-inline int clz_wrapper(uint64_t vic) { return vic ? __builtin_ctzll(vic) : 64; }
+inline int clz_wrapper(uint64_t vic) { return vic ? __builtin_clzll(vic) : 64; }
 
 inline int ctz_wrapper(uint64_t vic) { return vic ? __builtin_ctzll(vic) : 0; }
 
@@ -189,7 +189,7 @@ inline std::optional<int> log2(std::size_t Value) {
   if (popcounter_wrapper(Value) != 1) {
     return std::nullopt;
   } else {
-    return clz_wrapper(Value);
+    return ctz_wrapper(Value);
   }
 }
 
@@ -215,7 +215,7 @@ inline uint64_t signIntCompress(uint64_t integer, unsigned size) {
   int64_t signed_integer = *reinterpret_cast<int64_t*>(&integer);
 
   if (signed_integer >= 0) {
-    utils_assert(signed_integer < std::pow(2, size - 1), "size limit excessed");
+    utils_assert(signed_integer < std::pow(2, size) - 1, "size limit excessed");
 
     return integer;
   } else {
@@ -227,7 +227,7 @@ inline uint64_t signIntCompress(uint64_t integer, unsigned size) {
 }
 
 inline uint32_t signIntSlice(uint64_t interger, unsigned high, unsigned low) {
-  return ((interger & ((1 << (high + 1)) - 1)) & (0xffffffff << low)) >> low;
+  return (interger & (1ull << (high + 1)) - 1) >> low;
 }
 
 } // namespace utils

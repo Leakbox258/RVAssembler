@@ -132,7 +132,8 @@ Token Lexer::scanIdentifier() {
                      m_source.slice(start, m_cursor));
   }
 
-  if (MnemonicContain(lexeme.c_str()) || PseudoContain(lexeme.c_str())) {
+  if (MnemonicContain(lexeme.c_str()) || PseudoContain(lexeme.c_str()) ||
+      lexeme == "li") {
     return makeToken(TokenType::INSTRUCTION, lexeme);
   }
 

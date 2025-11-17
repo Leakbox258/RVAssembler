@@ -46,6 +46,11 @@ public:
 
   MCOperand& addOperand(MCOperand&& newOp);
 
+  /// dont need to make previously
+  template <typename... Args> void addOperands(Args&&... args) {
+    (addOperand(MCOperand::make(args)), ...);
+  }
+
   const MCOpCode* getOpCode() const { return OpCode; }
   utils::Location getLoc() const { return Loc; }
 
@@ -102,6 +107,11 @@ public:
   constexpr static MCInst makeCNop(Location Loc, size_ty Offset) {
     return MCInst(parser::MnemonicFind("c.nop"), Loc, Offset);
   }
+
+  using MCInsts = utils::ADT::SmallVector<MCInst, 4>;
+
+  static MCInsts makeLi(Location Loc, size_ty Offset, StringRef target,
+                        int64_t imme);
 
   uint32_t makeEncoding() const;
 

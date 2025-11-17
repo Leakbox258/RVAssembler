@@ -63,6 +63,7 @@ private:
 
   void ParseInstruction();
   void ParsePseudo();
+  void ParseLi();
 
   void ParseRegister();
   void ParseDirective();

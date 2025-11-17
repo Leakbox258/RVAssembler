@@ -108,6 +108,65 @@ uint32_t MCInst::getRiscvRType() const {
   }
 }
 
+using MCInsts = utils::ADT::SmallVector<MCInst, 4>;
+
+MCInsts MCInst::makeLi(Location Loc, size_ty Offset, StringRef target,
+                       int64_t imme) {
+  MCInsts insts{};
+
+  auto reg = *Registers.find(target);
+
+  auto addi_able = [](int64_t imme) -> bool {
+    return utils::in_interval<true, true, int64_t>(-2048, 2047, imme);
+  };
+
+  auto load32 = [&](int64_t imme) {
+    if (addi_able(imme)) {
+      /// addi x<>, x0, imme
+      auto addi = MCInst(parser::MnemonicFind("addi"), Loc, Offset += 4);
+      addi.addOperands(*Registers.find(target), *Registers.find("x0"), imme);
+
+      insts.emplace_back(std::move(addi));
+    } else {
+      /// lui x<>, %hi(imme
+      int64_t high20 = imme - (imme & 0xFFF), low12 = imme & 0xFFF;
+
+      if (high20) {
+        auto lui = MCInst(parser::MnemonicFind("lui"), Loc, Offset += 4);
+        lui.addOperands(reg, int64_t(high20 + (low12 > 0x800 ? 0x1000 : 0)));
+        insts.emplace_back(std::move(lui));
+      }
+
+      if (low12 < 0x800) {
+        /// addi x<>, x<>,%lo(imme)
+        auto addi = MCInst(parser::MnemonicFind("addi"), Loc, Offset += 4);
+        addi.addOperands(reg, reg, int64_t(low12));
+
+        insts.emplace_back(std::move(addi));
+      } else {
+        auto addi_0 = MCInst(parser::MnemonicFind("addi"), Loc, Offset += 4);
+        addi_0.addOperands(reg, reg, int64_t(0x7FF));
+
+        auto addi_1 = MCInst(parser::MnemonicFind("addi"), Loc, Offset += 4);
+        addi_1.addOperands(reg, reg, int64_t(low12 - 0x7FF));
+
+        insts.emplace_back(std::move(addi_0));
+        insts.emplace_back(std::move(addi_1));
+      }
+    }
+  };
+
+  load32(imme & 0xFFFFFFFF);
+
+  if (utils::clz_wrapper((uint64_t)imme) < 32) {
+    auto slli = MCInst(parser::MnemonicFind("slli"), Loc, Offset += 4);
+    slli.addOperands(reg, reg, (int64_t)32);
+    load32(imme >> 32);
+  }
+
+  return insts;
+}
+
 uint32_t MCInst::makeEncoding() const {
   auto& pattern = OpCode->encodings;
 
@@ -158,8 +217,14 @@ uint32_t MCInst::makeEncoding() const {
       auto immOp = this->findGImmOp();
 
       unsigned tmp_len = 0;
+
+      /// [31:12]
+      auto raw_imm = OpCode->name == "lui" || OpCode->name == "auipc"
+                         ? immOp.getGImm() << 12
+                         : immOp.getGImm();
+
       int64_t gimm =
-          utils::signIntCompress(immOp.getGImm(), highest + 1); // expecting len
+          utils::signIntCompress(raw_imm, highest + 1); // expecting len
 
       for (auto [high, low] : *encode.bit_range) {
         if (tmp_len == length) {

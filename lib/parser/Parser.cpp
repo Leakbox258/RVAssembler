@@ -11,8 +11,10 @@
 #include "utils/logger.hpp"
 #include "utils/macro.hpp"
 #include "utils/misc.hpp"
+#include <algorithm>
 #include <cstdint>
-#include <functional>
+#include <string>
+#include <sys/types.h>
 
 using namespace parser;
 using namespace mc;
@@ -87,7 +89,9 @@ void Parser::parse() {
       ParseModifier();
       break;
     case TokenType::INSTRUCTION:
-      if (isPseudo()) {
+      if (token.lexeme == "li") {
+        ParseLi();
+      } else if (isPseudo()) {
         ParsePseudo();
       } else {
         ParseInstruction();
@@ -390,6 +394,7 @@ void Parser::ParseInstruction() {
 
   advance();
 }
+
 void Parser::ParsePseudo() {
   /// collecting arguments
 
@@ -435,6 +440,46 @@ __call_back:
            pseudo(), std::tuple_cat(std::make_tuple(std::ref(ctx)), args))) {
     curTextOffset += inst->isCompressed() ? 2 : 4;
   }
+}
+
+void Parser::ParseLi() {
+  /// make align
+  auto [instAlign, padInst] =
+      std::make_tuple(4, MCInst::makeNop(token.loc, curTextOffset));
+
+  if (curTextOffset % instAlign) {
+    curTextOffset = ctx.addTextInst(std::move(padInst));
+  }
+
+  std::string reg;
+  int64_t imme;
+  while ((advance(), token.type != TokenType::NEWLINE)) {
+    switch (token.type) {
+    case TokenType::REGISTER:
+      reg = token.lexeme;
+      break;
+    case TokenType::INTEGER:
+      imme = std::stoll(token.lexeme);
+      break;
+    case TokenType::HEX_INTEGER:
+      imme = std::stoll(token.lexeme, nullptr, 16);
+      break;
+    case TokenType::COMMA:
+      continue;
+    case TokenType::END_OF_FILE:
+      goto __make_li;
+    default:
+      utils::unreachable("unknown item when unpacking pseudo");
+    }
+  }
+
+__make_li:
+  MCInst::MCInsts insts =
+      MCInst::makeLi(token.loc, curTextOffset, reg.c_str(), imme);
+
+  std::for_each(insts.begin(), insts.end(), [&](auto&& inst) {
+    curTextOffset = ctx.addTextInst(std::move(inst));
+  });
 }
 
 void Parser::ParseRegister() {
