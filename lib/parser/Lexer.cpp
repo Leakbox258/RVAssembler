@@ -104,16 +104,20 @@ void Lexer::skipWhitespaceAndComments() {
   }
 }
 
-Token Lexer::makeToken(TokenType type) const {
+const Token& Lexer::makeToken(TokenType type) {
+  lastToken =
+      Token{type, m_source.slice(m_cursor - 1, 1).str(), {m_line, m_col - 1}};
   // For single-character tokens
-  return {type, m_source.slice(m_cursor - 1, 1).str(), {m_line, m_col - 1}};
+  return lastToken;
 }
 
-Token Lexer::makeToken(TokenType type, StringRef lexeme) const {
-  return {type, lexeme.str(), {m_line, m_col - lexeme.size()}};
+const Token& Lexer::makeToken(TokenType type, StringRef lexeme) {
+  lastToken = Token{type, lexeme.str(), {m_line, m_col - lexeme.size()}};
+
+  return lastToken;
 }
 
-Token Lexer::scanIdentifier() {
+const Token& Lexer::scanIdentifier() {
   size_t start = m_cursor - 1;
   while (isalnum(peek()) || peek() == '_' || peek() == '.') {
     advance();
@@ -141,10 +145,19 @@ Token Lexer::scanIdentifier() {
     return makeToken(TokenType::REGISTER, lexeme);
   }
 
-  return makeToken(TokenType::IDENTIFIER, lexeme);
+  if (lexeme[0] != '.') {
+    return makeToken(TokenType::IDENTIFIER, m_source.slice(start, m_cursor));
+  }
+
+  if (lastToken.type == TokenType::NEWLINE || // last
+      lastToken.type == TokenType::UNKNOWN) { // very beginning
+    return makeToken(TokenType::DIRECTIVE, m_source.slice(start, m_cursor));
+  } else {
+    return makeToken(TokenType::IDENTIFIER, m_source.slice(start, m_cursor));
+  }
 }
 
-Token Lexer::scanNumber() {
+const Token& Lexer::scanNumber() {
   size_t start = m_cursor - 1;
   // Check for hexadecimal
   if (m_source[start] == '0' && (peek() == 'x' || peek() == 'X')) {
@@ -178,7 +191,7 @@ Token Lexer::scanNumber() {
                    m_source.slice(start, m_cursor));
 }
 
-Token Lexer::scanString() {
+const Token& Lexer::scanString() {
   size_t start = m_cursor; // Start after the opening quote
   while (peek() != '"' && !isAtEnd()) {
     if (peek() == '\n') { // Unterminated string
@@ -197,11 +210,12 @@ Token Lexer::scanString() {
   return makeToken(TokenType::STRING_LITERAL, lexeme);
 }
 
-Token Lexer::nextToken() {
+const Token& Lexer::nextToken() {
   skipWhitespaceAndComments();
 
   if (isAtEnd()) {
-    return {TokenType::END_OF_FILE, "", {m_line, m_col}};
+    lastToken = Token{TokenType::END_OF_FILE, "", {m_line, m_col}};
+    return lastToken;
   }
 
   char c = advance();
@@ -215,13 +229,6 @@ Token Lexer::nextToken() {
   }
 
   if (isalpha(c) || c == '_' || c == '.') {
-    if (c == '.') { // assume to be a directive
-      size_t start = m_cursor - 1;
-      while (isalnum(peek()) || peek() == '_') {
-        advance();
-      }
-      return makeToken(TokenType::DIRECTIVE, m_source.slice(start, m_cursor));
-    }
     return scanIdentifier();
   }
 
@@ -231,10 +238,10 @@ Token Lexer::nextToken() {
 
   switch (c) {
   case '\n': {
-    Token token = makeToken(TokenType::NEWLINE);
+    makeToken(TokenType::NEWLINE);
     m_line++;
     m_col = 1;
-    return token;
+    return lastToken;
   }
   case ',':
     return makeToken(TokenType::COMMA);

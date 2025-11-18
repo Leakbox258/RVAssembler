@@ -163,15 +163,12 @@ void Parser::ParseRParen() {
 void Parser::ParseColon() { advance(); }
 
 void Parser::ParseIdentifier() {
-  /// symbol used without modifiers
-  /// this is often branch/jump insts or
-  /// .global xxx or
-  /// TODO: pseudo instructions
   if (curInst) {
+    /// as dest of jr/br
     JrBrHelper(token.lexeme);
   } else {
+    /// check if is marked as global
     using Ndx = MCContext::NdxSection;
-
     auto isExist =
         !StringSwitch<bool>(DirectiveStack.back())
              .Case(".global", ".globl",
@@ -180,11 +177,9 @@ void Parser::ParseIdentifier() {
                          DirectiveStack[DirectiveStack.size() - 2];
 
                      if (section == ".data") {
-                       ctx.addDataVar(token.lexeme);
                        return ctx.addReloSym(token.lexeme, curDataOffset,
                                              Ndx::data);
                      } else if (section == ".bss") {
-                       ctx.addBssVar(token.lexeme);
                        return ctx.addReloSym(token.lexeme, curBssOffset,
                                              Ndx::bss);
                      } else if (section == ".text") {
@@ -286,8 +281,84 @@ void Parser::ParseInteger() {
 }
 
 void Parser::ParseHexInteger() {
-  curInst->addOperand(
-      MCOperand::makeImm(std::stoll(token.lexeme, nullptr, 16)));
+  auto dw = std::stoull(token.lexeme, nullptr, 16);
+  if (curInst) {
+    curInst->addOperand(MCOperand::makeImm(dw));
+  } else {
+    /// TODO: more directive
+
+    if (DirectiveStack[DirectiveStack.size() - 2] == ".data") {
+      StringSwitch<bool>(DirectiveStack.back())
+          .Case(".half",
+                [&](auto&& _) {
+                  curDataOffset = ctx.pushDataBuf<uint16_t>(dw);
+                  return true;
+                })
+          .Case(".word",
+                [&](auto&& _) {
+                  curDataOffset = ctx.pushDataBuf<uint32_t>(dw);
+                  return true;
+                })
+          .Case(".dword",
+                [&](auto&& _) {
+                  curDataOffset = ctx.pushDataBuf<uint64_t>(dw);
+                  return true;
+                })
+          .Case(".align",
+                [&](auto&& _) {
+                  utils_assert(dw < 16, "expectling align target to be "
+                                        "small than 16");
+
+                  curDataOffset = ctx.makeDataBufAlign(utils::pow2i(dw));
+
+                  return true;
+                })
+          .Case(".balign",
+                [&](auto&& _) {
+                  auto e = utils::log2(dw);
+                  utils_assert(e, "expecting dw to be pow of 2");
+
+                  curDataOffset = ctx.makeDataBufAlign(dw);
+                  return true;
+                })
+          .Error();
+
+      DirectiveStack.pop_back();
+
+    } else if (DirectiveStack[DirectiveStack.size() - 2] == ".bss") {
+      utils_assert(dw == 0, "data def in bss supposed to be all zero");
+
+      StringSwitch<bool>(DirectiveStack.back())
+          .Case(".zero",
+                [&](auto&& _) {
+                  curBssOffset = ctx.pushBssBuf(dw);
+                  return true;
+                })
+          .Case(".align",
+                [&](auto&& _) {
+                  utils_assert(dw < 16, "expectling align target to be "
+                                        "small than 16");
+
+                  curBssOffset = ctx.makeBssBufAlign(utils::pow2i(dw));
+
+                  return true;
+                })
+          .Case(".balign",
+                [&](auto&& _) {
+                  auto e = utils::log2(dw);
+                  utils_assert(e, "expecting dw to be pow of 2");
+
+                  curBssOffset = ctx.makeBssBufAlign(dw);
+                  return true;
+                })
+          .Error();
+
+      DirectiveStack.pop_back();
+
+    } else {
+      utils::unreachable("expect literal in .data or .bss section");
+    }
+  }
   advance();
 }
 
@@ -504,11 +575,28 @@ void Parser::ParseDirective() {
 }
 
 void Parser::ParseLabelDef() {
-  utils_assert(DirectiveStack.back() == ".text",
-               "expecting ddefine label in .text section");
-  utils_assert(
-      ctx.addTextLabel(token.lexeme.substr(0, token.lexeme.length() - 1)),
-      "text label redefinition!");
+
+  auto _ = StringSwitch<bool>(DirectiveStack.back())
+               .Case(".text",
+                     [&](auto&& _) {
+                       utils_assert(ctx.addTextLabel(token.lexeme.substr(
+                                        0, token.lexeme.length() - 1)),
+                                    "text label redefinition!");
+                       return true;
+                     })
+               .Case(".data",
+                     [&](auto&& _) {
+                       utils_assert(ctx.addDataVar(token.lexeme),
+                                    "data label redefinition!");
+                       return true;
+                     })
+               .Case(".bss",
+                     [&](auto&& _) {
+                       utils_assert(ctx.addBssVar(token.lexeme),
+                                    "bss label redefinition");
+                       return true;
+                     })
+               .Error();
 
   advance();
 }

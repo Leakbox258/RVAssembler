@@ -1,7 +1,7 @@
 // clang-format off
 
 /// reference: https://ai-embedded.com/risc-v/riscv-isa-manual/
-/// reference: https://mirror.iscas.ac.cn/riscv-toolchains/release/riscv/riscv-isa-manual/RISC-V%20ISA%20Manual%2C%20Version%2020250508/riscv-unprivileged.pdf
+/// reference: https://mirror.iscas.ac.cn/riscv-toolchains/release/riscv/riscv-isa-manual/
 
 /// TODO: Encoding of 32C & 64C
 

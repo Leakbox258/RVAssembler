@@ -44,6 +44,24 @@ struct Token {
   std::string lexeme;
   mc::Location loc;
 
+  Token() { this->type = TokenType::UNKNOWN; }
+
+  Token(TokenType _type, std::string _lex, mc::Location _loc)
+      : type(_type), lexeme(std::move(_lex)), loc(_loc) {}
+
+  Token(const Token& token) {
+    this->type = token.type;
+    this->lexeme = token.lexeme;
+    this->loc = token.loc;
+  }
+
+  Token& operator=(const Token& token) {
+    this->type = token.type;
+    this->lexeme = token.lexeme;
+    this->loc = token.loc;
+    return *this;
+  }
+
   void print() const;
 };
 
@@ -51,7 +69,7 @@ class Lexer {
 public:
   Lexer(StringRef source);
 
-  Token nextToken();
+  const Token& nextToken();
 
   template <std::size_t N> SmallVector<Token, N> peekNextTokens() {
     SmallVector<Token, N> tokens{};
@@ -84,14 +102,16 @@ private:
   char peek() const;
   char peekNext() const;
 
-  void skipWhitespaceAndComments();
-  Token makeToken(TokenType type) const;
-  Token makeToken(TokenType type, StringRef lexeme) const;
-  Token errorToken(const char* message) const;
+  Token lastToken{};
 
-  Token scanIdentifier();
-  Token scanNumber();
-  Token scanString();
+  void skipWhitespaceAndComments();
+  const Token& makeToken(TokenType type);
+  const Token& makeToken(TokenType type, StringRef lexeme);
+  const Token& errorToken(const char* message) const;
+
+  const Token& scanIdentifier();
+  const Token& scanNumber();
+  const Token& scanString();
 };
 } // namespace parser
 #endif

@@ -229,7 +229,7 @@ public:
                            auto [bit_range, length, highest] =
                                parseBitRange(Str.slice(3, Str.size() - 1));
 
-                           return EnCoding{EnCoding::kRd, length, highest,
+                           return EnCoding{EnCoding::kRm, length, highest,
                                            bit_range, std::nullopt};
                          })
               .BeginWith("pred",

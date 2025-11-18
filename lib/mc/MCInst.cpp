@@ -210,6 +210,9 @@ uint32_t MCInst::makeEncoding() const {
       inst.add(this->findRegOp<3>().getReg(), length);
       break;
     case EnCoding::kRm:
+      /// TODO: more rounding modes
+      inst.add(0b111, 3); // rm[0:2]
+      break;
     case EnCoding::kMemFence:
     case EnCoding::kImm:
     case EnCoding::kNzImm:

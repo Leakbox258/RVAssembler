@@ -12,14 +12,19 @@ main_0:
 	BGEU x1, x2, main_6
 main_1:
 	addi x0, x0, 114
+	ret
 main_2:
 	addi x0, x0, 115
+	ret
 main_3:
 	addi x0, x0, 116
+	ret
 main_4:
 	addi x0, x0, 117
+	ret
 main_5:
 	addi x0, x0, 118
+	ret
 main_6:
 	addi x0, x0, 119
-	
+	ret

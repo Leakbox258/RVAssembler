@@ -22,8 +22,8 @@ main:
     fadd.s ft4, ft0, ft1      # ft4 = 1.5 + (-2.25) = -0.75 #
     la t2, exp_single
     flw ft8, 0(t2)            # ft8 = expected -0.75 #
-    fmv.x.s t3, ft4
-    fmv.x.s t4, ft8
+    fmv.x.w t3, ft4
+    fmv.x.w t4, ft8
     beq t3, t4, .Lok_add
     mv a0, s0
     ret
@@ -33,8 +33,8 @@ main:
     # --- 浮点减法 fsub.s --- #
     fsub.s ft4, ft0, ft1      # 1.5 - (-2.25) = 3.75 #
     flw ft8, 4(t2)            # expected 3.75 #
-    fmv.x.s t3, ft4
-    fmv.x.s t4, ft8
+    fmv.x.w t3, ft4
+    fmv.x.w t4, ft8
     beq t3, t4, .Lok_sub
     mv a0, s0
     ret
@@ -44,8 +44,8 @@ main:
     # --- 浮点乘法 fmul.s --- #
     fmul.s ft4, ft0, ft1      # 1.5 * -2.25 = -3.375 #
     flw ft8, 8(t2)            # expected -3.375 #
-    fmv.x.s t3, ft4
-    fmv.x.s t4, ft8
+    fmv.x.w t3, ft4
+    fmv.x.w t4, ft8
     beq t3, t4, .Lok_mul
     mv a0, s0
     ret
@@ -55,8 +55,8 @@ main:
     # --- 浮点除法 fdiv.s --- #
     fdiv.s ft4, ft0, ft1      # 1.5 / -2.25 = -0.6666667 #
     flw ft8, 12(t2)           # expected ~ -0.6666667 #
-    fmv.x.s t3, ft4
-    fmv.x.s t4, ft8
+    fmv.x.w t3, ft4
+    fmv.x.w t4, ft8
     beq t3, t4, .Lok_div
     mv a0, s0
     ret
@@ -66,8 +66,8 @@ main:
     # --- 平方根 fsqrt.s --- #
     fsqrt.s ft4, ft0          # sqrt(1.5) #
     flw ft8, 16(t2)           # expected sqrt(1.5) #
-    fmv.x.s t3, ft4
-    fmv.x.s t4, ft8
+    fmv.x.w t3, ft4
+    fmv.x.w t4, ft8
     beq t3, t4, .Lok_sqrt
     mv a0, s0
     ret
@@ -80,8 +80,8 @@ main:
     fmadd.s ft5, ft0, ft1, ft8
     # 计算预期值（由内存给出） #
     flw ft9, 20(t2)
-    fmv.x.s t3, ft5
-    fmv.x.s t4, ft9
+    fmv.x.w t3, ft5
+    fmv.x.w t4, ft9
     beq t3, t4, .Lok_fmadd
     mv a0, s0
     ret
@@ -91,8 +91,8 @@ main:
     # --- 符号操作 fsgnj.s/fsgnjn.s/fsgnjx.s --- #
     fsgnj.s ft6, ft0, ft1    # 把 ft1 的符号给 ft0 #
     flw ft9, 24(t2)          # expected value #
-    fmv.x.s t3, ft6
-    fmv.x.s t4, ft9
+    fmv.x.w t3, ft6
+    fmv.x.w t4, ft9
     beq t3, t4, .Lok_fsgnj
     mv a0, s0
     ret
@@ -102,8 +102,8 @@ main:
     # --- fmin/fmax --- #
     fmin.s ft6, ft0, ft1     # min(1.5, -2.25) = -2.25 #
     flw ft9, 28(t2)
-    fmv.x.s t3, ft6
-    fmv.x.s t4, ft9
+    fmv.x.w t3, ft6
+    fmv.x.w t4, ft9
     beq t3, t4, .Lok_fmin
     mv a0, s0
     ret
@@ -112,8 +112,8 @@ main:
 
     fmax.s ft6, ft0, ft1     # max = 1.5 #
     flw ft9, 32(t2)
-    fmv.x.s t3, ft6
-    fmv.x.s t4, ft9
+    fmv.x.w t3, ft6
+    fmv.x.w t4, ft9
     beq t3, t4, .Lok_fmax
     mv a0, s0
     ret
@@ -169,8 +169,6 @@ main:
 .Lconv_fail:
     mv a0, s0
     ret
-
-    .option pop
 
     .data
     .align 4
