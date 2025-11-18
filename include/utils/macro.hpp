@@ -7,7 +7,7 @@
 #define LIFETIME_BOUND
 #endif
 
-#include "utils/logger.hpp"
+#include "logger.hpp"
 #include <source_location>
 
 #ifndef NDEBUG

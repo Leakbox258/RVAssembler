@@ -3,7 +3,7 @@
 .text
 .globl main
 main: 
-main_0: 
+main_0: # rv32/64 I
 	and x1, x2, x3
 	or x1, x2, x3
 	andi x1, x2, 255 # 0xff
@@ -17,4 +17,6 @@ main_0:
 	slt x1, x2, x3
 	lw x1, 0(sp)
 	lbu x1, 0(x2)
+	ecall
+	ebreak
 	ret

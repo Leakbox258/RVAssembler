@@ -79,7 +79,7 @@ template <typename... Args> constexpr inline bool pairs_equal(Args&&... args) {
 }
 
 template <typename R>
-inline auto size(
+inline auto iter_size(
     R&& Range,
     std::enable_if_t<
         std::is_base_of<std::random_access_iterator_tag,
