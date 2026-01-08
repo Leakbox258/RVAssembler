@@ -135,6 +135,10 @@ MCInsts MCInst::makeLi(Location Loc, size_ty Offset, StringRef target,
         auto lui = MCInst(parser::MnemonicFind("lui"), Loc, Offset += 4);
         lui.addOperands(reg, int64_t(high20 + (low12 > 0x800 ? 0x1000 : 0)));
         insts.emplace_back(std::move(lui));
+      } else {
+        auto mv = MCInst(parser::MnemonicFind("addi"), Loc, Offset += 4);
+        mv.addOperands(reg, *Registers.find("x0"), (int64_t)0);
+        insts.emplace_back(std::move(mv));
       }
 
       if (low12 < 0x800) {
